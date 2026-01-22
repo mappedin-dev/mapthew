@@ -1,0 +1,38 @@
+services:
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+
+  webhook:
+    build: ./packages/webhook
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./packages/shared:/app/packages/shared
+      - ./packages/webhook/src:/app/src
+    environment:
+      - REDIS_URL=redis://redis:6379
+      - JIRA_BASE_URL
+      - JIRA_EMAIL
+      - JIRA_API_TOKEN
+      - JIRA_WEBHOOK_SECRET
+    env_file: .env
+    depends_on:
+      - redis
+
+  worker:
+    build: ./packages/worker
+    volumes:
+      - ./packages/shared:/app/packages/shared
+      - ./packages/worker/src:/app/src
+    environment:
+      - REDIS_URL=redis://redis:6379
+      - JIRA_BASE_URL
+      - JIRA_EMAIL
+      - JIRA_API_TOKEN
+      - GITHUB_TOKEN
+      - ANTHROPIC_API_KEY
+    env_file: .env
+    depends_on:
+      - redis
