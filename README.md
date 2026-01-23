@@ -2,6 +2,28 @@
 
 Your AI-powered intern that turns JIRA tickets into pull requests. Mention `@dexter` in a JIRA comment with an instruction, and it will read the ticket, make code changes, and open a PR on GitHub.
 
+## Using Dexter in JIRA
+
+1. Navigate to any JIRA ticket
+2. Add a comment mentioning `@dexter` followed by your instruction:
+   ```
+   @dexter implement this feature
+   ```
+3. Dexter will:
+   - Read the ticket details (summary, description, comments, attachments)
+   - Find the relevant GitHub repository
+   - Create a branch and implement the requested changes
+   - Open a pull request and post the link back to the ticket
+
+### Tips
+
+- Be specific in your instructions for better results
+- Include the repository URL in your comment if Dexter can't find it automatically:
+  ```
+  @dexter implement this in https://github.com/org/repo
+  ```
+- Dexter posts progress updates as comments, so you can track its work
+
 ## Prerequisites
 
 - [Docker](https://www.docker.com/) and Docker Compose
