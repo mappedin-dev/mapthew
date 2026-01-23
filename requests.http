@@ -1,0 +1,45 @@
+# Use with VS Code REST Client extension or IntelliJ HTTP Client
+
+@baseUrl = http://localhost:3000
+
+### Health Check
+GET {{baseUrl}}/health
+
+### Trigger Dexter Workflow (simulated JIRA comment)
+POST {{baseUrl}}/webhook/jira
+Content-Type: application/json
+
+{
+  "webhookEvent": "comment_created",
+  "comment": {
+    "body": "@dexter implement the change described in this ticket",
+    "author": { "displayName": "Test Developer" }
+  },
+  "issue": { "key": "DXTR-2" }
+}
+
+### Non-dexter comment (should be ignored)
+POST {{baseUrl}}/webhook/jira
+Content-Type: application/json
+
+{
+  "webhookEvent": "comment_created",
+  "comment": {
+    "body": "This is a regular comment without the trigger",
+    "author": { "displayName": "Product Manager" }
+  },
+  "issue": { "key": "TASK-789" }
+}
+
+### Non-comment event (should be ignored)
+POST {{baseUrl}}/webhook/jira
+Content-Type: application/json
+
+{
+  "webhookEvent": "issue_updated",
+  "comment": {
+    "body": "@dexter this won't trigger because event type is wrong",
+    "author": { "displayName": "Test Developer" }
+  },
+  "issue": { "key": "TEST-001" }
+}

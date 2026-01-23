@@ -1,14 +1,25 @@
-import { Queue, Worker, type Job as BullJob, type Processor } from 'bullmq';
-import type { Job } from './types.js';
+import { Queue, Worker, type Job as BullJob, type Processor } from "bullmq";
+import type { Job } from "./types.js";
 
-const QUEUE_NAME = 'dexter-jobs';
+const QUEUE_NAME = "dexter-jobs";
 
 /**
  * Create a BullMQ queue for adding jobs
  */
 export function createQueue(redisUrl: string): Queue<Job> {
   const connection = parseRedisUrl(redisUrl);
-  return new Queue<Job>(QUEUE_NAME, { connection });
+  return new Queue<Job>(QUEUE_NAME, {
+    connection,
+    defaultJobOptions: {
+      removeOnComplete: {
+        age: 86400, // Remove completed jobs after 24 hours
+        count: 100, // Keep at most 100 completed jobs
+      },
+      removeOnFail: {
+        age: 604800, // Remove failed jobs after 7 days
+      },
+    },
+  });
 }
 
 /**

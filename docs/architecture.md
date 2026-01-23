@@ -127,3 +127,18 @@ sequenceDiagram
 > Both MCP servers and Git CLI authenticate via environment variables (`JIRA_API_TOKEN`, `GITHUB_TOKEN`).
 
 ---
+
+## Admin Dashboard
+
+The webhook server exposes a [Bull Board](https://github.com/felixmosh/bull-board) dashboard at `/admin` for monitoring the job queue.
+
+**URL:** `http://localhost:3000/admin`
+
+**Features:**
+
+- View jobs by status (waiting, active, completed, failed, delayed)
+- Inspect job data and error messages
+- Retry or remove failed jobs
+- Queue statistics
+
+---

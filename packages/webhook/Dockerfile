@@ -1,12 +1,47 @@
-FROM node:22-alpine
-
-RUN npm install -g pnpm tsx
-
+# ============================================
+# Base stage - shared between dev and prod
+# ============================================
+FROM node:22-alpine AS base
+RUN npm install -g pnpm
 WORKDIR /app
 
-COPY package.json pnpm-lock.yaml* ./
-RUN pnpm install --frozen-lockfile || pnpm install
+COPY pnpm-workspace.yaml pnpm-lock.yaml ./
+COPY packages/shared/package.json ./packages/shared/
+COPY packages/webhook/package.json ./packages/webhook/
 
-COPY . .
+# ============================================
+# Development stage
+# ============================================
+FROM base AS dev
+RUN npm install -g tsx
+RUN pnpm install --frozen-lockfile
 
+COPY packages/shared ./packages/shared
+COPY packages/webhook ./packages/webhook
+
+WORKDIR /app/packages/webhook
 CMD ["tsx", "watch", "src/index.ts"]
+
+# ============================================
+# Build stage - compile TypeScript
+# ============================================
+FROM base AS builder
+RUN pnpm install --frozen-lockfile
+
+COPY packages/shared ./packages/shared
+COPY packages/webhook ./packages/webhook
+
+RUN pnpm --filter @dexter/shared build && \
+    pnpm --filter @dexter/webhook build
+
+# ============================================
+# Production stage
+# ============================================
+FROM base AS prod
+RUN pnpm install --frozen-lockfile --prod
+
+COPY --from=builder /app/packages/shared/dist ./packages/shared/dist
+COPY --from=builder /app/packages/webhook/dist ./packages/webhook/dist
+
+WORKDIR /app/packages/webhook
+CMD ["node", "dist/index.js"]

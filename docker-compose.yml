@@ -1,31 +1,39 @@
 services:
   redis:
+    container_name: redis
     image: redis:7-alpine
     ports:
       - "${REDIS_PORT:-6379}:6379"
 
   webhook:
-    build: ./packages/webhook
+    container_name: webhook
+    build:
+      context: .
+      dockerfile: packages/webhook/Dockerfile
+      target: dev
     ports:
       - "3000:3000"
     volumes:
       - ./packages/shared:/app/packages/shared
-      - ./packages/webhook/src:/app/src
+      - ./packages/webhook/src:/app/packages/webhook/src
     environment:
       - REDIS_URL=redis://redis:6379
       - JIRA_BASE_URL
       - JIRA_EMAIL
       - JIRA_API_TOKEN
-      - JIRA_WEBHOOK_SECRET
     env_file: .env
     depends_on:
       - redis
 
   worker:
-    build: ./packages/worker
+    container_name: worker-1
+    build:
+      context: .
+      dockerfile: packages/worker/Dockerfile
+      target: dev
     volumes:
       - ./packages/shared:/app/packages/shared
-      - ./packages/worker/src:/app/src
+      - ./packages/worker/src:/app/packages/worker/src
     environment:
       - REDIS_URL=redis://redis:6379
       - JIRA_BASE_URL
@@ -33,6 +41,7 @@ services:
       - JIRA_API_TOKEN
       - GITHUB_TOKEN
       - ANTHROPIC_API_KEY
+      - CLAUDE_MODEL
     env_file: .env
     depends_on:
       - redis

@@ -1,0 +1,41 @@
+services:
+  redis:
+    container_name: redis
+    image: redis:7-alpine
+    restart: unless-stopped
+
+  webhook:
+    container_name: webhook
+    build:
+      context: .
+      dockerfile: packages/webhook/Dockerfile
+      target: prod
+    ports:
+      - "3000:3000"
+    environment:
+      - REDIS_URL=redis://redis:6379
+      - JIRA_BASE_URL
+      - JIRA_EMAIL
+      - JIRA_API_TOKEN
+    env_file: .env
+    restart: unless-stopped
+    depends_on:
+      - redis
+
+  worker:
+    container_name: worker-1
+    build:
+      context: .
+      dockerfile: packages/worker/Dockerfile
+      target: prod
+    environment:
+      - REDIS_URL=redis://redis:6379
+      - JIRA_BASE_URL
+      - JIRA_EMAIL
+      - JIRA_API_TOKEN
+      - GITHUB_TOKEN
+      - ANTHROPIC_API_KEY
+    env_file: .env
+    restart: unless-stopped
+    depends_on:
+      - redis

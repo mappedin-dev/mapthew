@@ -1,0 +1,17 @@
+{
+  "name": "@dexter/integration-tests-mcp",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "tsx index.ts",
+    "test:github": "tsx index.ts --github",
+    "test:jira": "tsx index.ts --jira"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "dotenv": "^17.2.3",
+    "tsx": "^4.0.0",
+    "typescript": "^5.7.0"
+  }
+}

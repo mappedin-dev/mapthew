@@ -9,30 +9,18 @@ export interface Job {
 
 /**
  * JIRA webhook payload for comment_created event
+ * Minimal payload - MCP fetches full ticket details
  */
 export interface WebhookPayload {
   webhookEvent: string;
   comment: {
-    id: string;
     body: string;
     author: {
-      accountId: string;
       displayName: string;
-      emailAddress?: string;
     };
-    created: string;
   };
   issue: {
-    id: string;
     key: string;
-    fields: {
-      summary: string;
-      description?: string;
-      project: {
-        key: string;
-        name: string;
-      };
-    };
   };
 }
 
@@ -40,7 +28,7 @@ export interface WebhookPayload {
  * Check if a webhook payload is a comment_created event
  */
 export function isCommentCreatedEvent(payload: WebhookPayload): boolean {
-  return payload.webhookEvent === 'comment_created';
+  return payload.webhookEvent === "comment_created";
 }
 
 /**

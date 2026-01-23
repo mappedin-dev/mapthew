@@ -4,11 +4,15 @@
   "packageManager": "pnpm@9.15.0",
   "scripts": {
     "dev": "docker-compose up",
-    "dev:build": "docker-compose up --build",
     "dev:down": "docker-compose down",
+    "dev:force-rebuild": "docker-compose down && docker-compose build --no-cache && docker-compose up",
     "build": "pnpm -r build",
     "lint": "pnpm -r lint",
-    "clean": "pnpm -r clean && rm -rf node_modules"
+    "clean": "pnpm -r clean && rm -rf node_modules",
+    "shared": "pnpm --filter @dexter/shared",
+    "webhook": "pnpm --filter @dexter/webhook",
+    "worker": "pnpm --filter @dexter/worker",
+    "mcp": "pnpm --filter @dexter/integration-tests-mcp"
   },
   "devDependencies": {
     "typescript": "^5.7.0"
