@@ -22,7 +22,7 @@ Your task:
    - If the requirements are unclear, ambiguous, or missing critical details, DO NOT proceed with implementation
    - Instead, post a comment on the JIRA ticket asking for clarification
    - Be specific about what information you need (e.g., "Should the button be placed in the header or sidebar?")
-   - Wait for a response before continuing - do not guess or make assumptions about unclear requirements
+   - Do not wait for a response, move onto a different task, responses will trigger a new worker to pick up the task and proceed with it
 
 4. Use the GitHub MCP to search for the appropriate repository based on the ticket context.
    - Look at the project key, board, labels, components, and description
