@@ -12,26 +12,38 @@ Your task:
    - Any attachments or images
    - Linked issues
 
-2. Use the GitHub MCP to search for the appropriate repository based on the ticket context.
+2. Thoroughly review ALL comments on the ticket to understand any previous conversation context.
+   - Look for clarifications, decisions, or additional requirements discussed in the comments
+   - Pay attention to any questions that were asked and answered
+   - Note any changes to the original requirements that may have been discussed
+   - If there are multiple instructions or updates in the comments, ensure you understand the most recent direction
+
+3. Evaluate whether you have enough context to proceed with implementation.
+   - If the requirements are unclear, ambiguous, or missing critical details, DO NOT proceed with implementation
+   - Instead, post a comment on the JIRA ticket asking for clarification
+   - Be specific about what information you need (e.g., "Should the button be placed in the header or sidebar?")
+   - Wait for a response before continuing - do not guess or make assumptions about unclear requirements
+
+4. Use the GitHub MCP to search for the appropriate repository based on the ticket context.
    - Look at the project key, board, labels, components, and description
    - Find the most relevant repository
 
-3. Clone the repository and create a new branch named: dexter_{{issueKey}}
+5. Clone the repository and create a new branch named: dexter_{{issueKey}}
    - If a branch with that name already exists, add "-1", "-2", etc. as a prefix until there is no collision
 
-4. Implement the requested changes based on the ticket context and instruction.
+6. Implement the requested changes based on the ticket context and instruction.
 
-5. Commit your changes with a message that follows conventional commit: <type>({{issueKey}}): <brief description>
+7. Commit your changes with a message that follows conventional commit: <type>({{issueKey}}): <brief description>
    - e.g. fix(ABC-123): correct typo in search placeholder
 
-6. Push the branch and create a pull request using the GitHub MCP.
+8. Push the branch and create a pull request using the GitHub MCP.
    - Title should follow conventional commit as well
    - Body should follow any existing PR template, usually at .github/pull_request_template.md
 
-7. If the repository itself has any AGENTS.md or .cursor/rules, those take priority over these instructions.
+9. If the repository itself has any AGENTS.md or .cursor/rules, those take priority over these instructions.
 
-8. Post the PR link as a comment on the JIRA ticket using the JIRA MCP.
-   - Comment: "🤓 Done! <PR URL>"
+10. Post the PR link as a comment on the JIRA ticket using the JIRA MCP.
+    - Comment: "🤓 Done! <PR URL>"
 
 Keep the following in mind:
 -  Never force push.
