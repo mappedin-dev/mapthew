@@ -1,4 +1,5 @@
-import { createWorker, createQueue, type Job, type BullJob } from '@dexter/shared';
+import { createWorker, type BullJob } from '@dexter/shared/queue';
+import type { Job } from '@dexter/shared/types';
 import { invokeClaudeCode } from './claude.js';
 import fs from 'fs/promises';
 import path from 'path';

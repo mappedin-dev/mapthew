@@ -7,13 +7,13 @@ import { createHmac, timingSafeEqual } from "crypto";
 import { createBullBoard } from "@bull-board/api";
 import { BullMQAdapter } from "@bull-board/api/bullMQAdapter";
 import { ExpressAdapter } from "@bull-board/express";
+import { createQueue } from "@dexter/shared/queue";
 import {
-  createQueue,
   type Job,
   type WebhookPayload,
   isCommentCreatedEvent,
   extractDexterInstruction,
-} from "@dexter/shared";
+} from "@dexter/shared/types";
 
 const app = express();
 const PORT = process.env.PORT || 3000;
