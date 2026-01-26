@@ -15,6 +15,22 @@ Your AI-powered intern that turns JIRA tickets into pull requests. Mention `@dex
    - Create a branch and implement the requested changes
    - Open a pull request and post the link back to the ticket
 
+## Using Dexter in GitHub PR Comments
+
+Once Dexter has opened a PR, you can request updates by mentioning `@dexter` in a PR comment:
+
+1. Navigate to any PR created by Dexter (branch name should contain a JIRA ticket key like `dexter_DXTR-123`)
+2. Add a comment mentioning `@dexter` followed by your instruction:
+   ```
+   @dexter please add unit tests for this feature
+   ```
+3. Dexter will:
+   - Read the original JIRA ticket for context
+   - Review the PR and existing comments
+   - Make the requested changes on the existing branch
+   - Push new commits to update the PR
+   - Post a summary of changes as a PR comment
+
 ### Tips
 
 - Be specific in your instructions for better results
@@ -23,6 +39,7 @@ Your AI-powered intern that turns JIRA tickets into pull requests. Mention `@dex
   @dexter implement this in https://github.com/org/repo
   ```
 - Dexter posts progress updates as comments, so you can track its work
+- When requesting PR updates via GitHub, Dexter will work on the existing branch instead of creating a new one
 
 ## Prerequisites
 
@@ -31,12 +48,13 @@ Your AI-powered intern that turns JIRA tickets into pull requests. Mention `@dex
 
 ## Credentials
 
-| Credential              | Purpose                              |
-| ----------------------- | ------------------------------------ |
-| **JIRA API Token**      | Reading tickets and posting comments |
-| **JIRA Webhook Secret** | Verify webhook signatures (optional) |
-| **GitHub PAT**          | `repo` and `workflow` scopes         |
-| **Anthropic API Key**   | Claude Code CLI                      |
+| Credential                | Purpose                                 |
+| ------------------------- | --------------------------------------- |
+| **JIRA API Token**        | Reading tickets and posting comments    |
+| **JIRA Webhook Secret**   | Verify webhook signatures (optional)    |
+| **GitHub PAT**            | `repo` and `workflow` scopes            |
+| **GitHub Webhook Secret** | Verify GitHub webhook signatures (optional) |
+| **Anthropic API Key**     | Claude Code CLI                         |
 
 ## Setup
 
@@ -60,7 +78,9 @@ Your AI-powered intern that turns JIRA tickets into pull requests. Mention `@dex
 
    This runs Redis, the webhook server, and the worker via Docker Compose.
 
-4. Expose the webhook server (defaults to `:3000`) to the internet and configure your JIRA webhook to point to it.
+4. Expose the webhook server (defaults to `:3000`) to the internet and configure your webhooks:
+   - **JIRA**: Point to `/webhook/jira` for ticket comment triggers
+   - **GitHub**: Point to `/webhook/github` for PR comment triggers (configure for `issue_comment` events)
 
 ## Local Testing
 

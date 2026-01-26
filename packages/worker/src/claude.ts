@@ -7,9 +7,12 @@ import type { Job } from "@dexter/shared";
 // ES module equivalent of __dirname
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
-// Load instructions template at startup
-const instructionsPath = path.join(__dirname, "..", "instructions.txt");
-const instructionsTemplate = fs.readFileSync(instructionsPath, "utf-8");
+// Load instructions templates at startup
+const jiraInstructionsPath = path.join(__dirname, "..", "instructions.txt");
+const jiraInstructionsTemplate = fs.readFileSync(jiraInstructionsPath, "utf-8");
+
+const githubInstructionsPath = path.join(__dirname, "..", "instructions-github.txt");
+const githubInstructionsTemplate = fs.readFileSync(githubInstructionsPath, "utf-8");
 
 // MCP config path
 const mcpConfigPath = path.join(__dirname, "..", "mcp-config.json");
@@ -18,7 +21,22 @@ const mcpConfigPath = path.join(__dirname, "..", "mcp-config.json");
  * Build the prompt for Claude Code CLI
  */
 function buildPrompt(job: Job): string {
-  return instructionsTemplate
+  // Use GitHub-specific template if job was triggered from GitHub
+  if (job.source === "github" && job.github) {
+    return githubInstructionsTemplate
+      .replace(/\{\{issueKey\}\}/g, job.issueKey)
+      .replace(/\{\{triggeredBy\}\}/g, job.triggeredBy)
+      .replace(/\{\{instruction\}\}/g, job.instruction)
+      .replace(/\{\{owner\}\}/g, job.github.owner)
+      .replace(/\{\{repo\}\}/g, job.github.repo)
+      .replace(/\{\{prNumber\}\}/g, String(job.github.prNumber))
+      .replace(/\{\{branch\}\}/g, job.github.branch)
+      .replace(/\{\{timestamp\}\}/g, String(Date.now()))
+      .trim();
+  }
+
+  // Use JIRA template for JIRA-triggered jobs
+  return jiraInstructionsTemplate
     .replace(/\{\{issueKey\}\}/g, job.issueKey)
     .replace(/\{\{triggeredBy\}\}/g, job.triggeredBy)
     .replace(/\{\{instruction\}\}/g, job.instruction)
