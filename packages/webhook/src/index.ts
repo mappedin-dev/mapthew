@@ -3,20 +3,22 @@ import express, {
   type Response,
   type NextFunction,
 } from "express";
-import { createHmac, timingSafeEqual } from "crypto";
 import { createBullBoard } from "@bull-board/api";
 import { BullMQAdapter } from "@bull-board/api/bullMQAdapter";
 import { ExpressAdapter } from "@bull-board/express";
 import {
   createQueue,
-  type Job,
+  type JiraJob,
+  type GitHubJob,
   type WebhookPayload,
   type GitHubWebhookPayload,
-  type GitHubContext,
   isCommentCreatedEvent,
   extractDexterInstruction,
   isGitHubPRCommentEvent,
   extractIssueKeyFromBranch,
+  verifyHmacSignature,
+  postJiraComment,
+  postGitHubComment,
 } from "@dexter/shared";
 
 const app = express();
@@ -42,60 +44,6 @@ createBullBoard({
 });
 
 app.use("/admin", serverAdapter.getRouter());
-
-/**
- * Verify Jira webhook signature using HMAC-SHA256
- * Jira sends signature in X-Hub-Signature header with format: sha256=<signature>
- */
-function verifyJiraSignature(
-  secret: string,
-  payload: string,
-  signature: string
-): boolean {
-  if (!signature) return false;
-
-  // Handle both "sha256=xxx" format and raw signature
-  const sig = signature.startsWith("sha256=") ? signature.slice(7) : signature;
-
-  const expectedSignature = createHmac("sha256", secret)
-    .update(payload, "utf8")
-    .digest("hex");
-
-  try {
-    return timingSafeEqual(
-      Buffer.from(sig, "hex"),
-      Buffer.from(expectedSignature, "hex")
-    );
-  } catch {
-    return false;
-  }
-}
-
-/**
- * Verify GitHub webhook signature using HMAC-SHA256
- */
-function verifyGitHubSignature(
-  secret: string,
-  payload: string,
-  signature: string
-): boolean {
-  if (!signature) return false;
-
-  const sig = signature.startsWith("sha256=") ? signature.slice(7) : signature;
-
-  const expectedSignature = createHmac("sha256", secret)
-    .update(payload, "utf8")
-    .digest("hex");
-
-  try {
-    return timingSafeEqual(
-      Buffer.from(sig, "hex"),
-      Buffer.from(expectedSignature, "hex")
-    );
-  } catch {
-    return false;
-  }
-}
 
 /**
  * Middleware to verify GitHub webhook secret
@@ -129,7 +77,7 @@ function githubWebhookAuth(
     return;
   }
 
-  if (!verifyGitHubSignature(GITHUB_WEBHOOK_SECRET, rawBody, signature)) {
+  if (!verifyHmacSignature(GITHUB_WEBHOOK_SECRET, rawBody, signature)) {
     console.warn("Invalid GitHub webhook signature");
     res.status(401).json({ error: "Invalid webhook signature" });
     return;
@@ -172,7 +120,7 @@ function jiraWebhookAuth(
     return;
   }
 
-  if (!verifyJiraSignature(JIRA_WEBHOOK_SECRET, rawBody, signature)) {
+  if (!verifyHmacSignature(JIRA_WEBHOOK_SECRET, rawBody, signature)) {
     console.warn("Invalid Jira webhook signature");
     res.status(401).json({ error: "Invalid webhook signature" });
     return;
@@ -190,48 +138,19 @@ app.use(
   })
 );
 
+// JIRA credentials for posting comments
+const jiraCredentials = {
+  baseUrl: JIRA_BASE_URL,
+  email: JIRA_EMAIL,
+  apiToken: JIRA_API_TOKEN,
+};
+
 /**
- * Post a comment to JIRA
+ * Extract project key from issue key (e.g., "DXTR-123" -> "DXTR")
  */
-async function postJiraComment(
-  issueKey: string,
-  comment: string
-): Promise<void> {
-  if (!JIRA_BASE_URL || !JIRA_EMAIL || !JIRA_API_TOKEN) {
-    console.warn("JIRA credentials not configured - skipping comment");
-    return;
-  }
-
-  const auth = Buffer.from(`${JIRA_EMAIL}:${JIRA_API_TOKEN}`).toString(
-    "base64"
-  );
-
-  const response = await fetch(
-    `${JIRA_BASE_URL}/rest/api/3/issue/${issueKey}/comment`,
-    {
-      method: "POST",
-      headers: {
-        Authorization: `Basic ${auth}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        body: {
-          type: "doc",
-          version: 1,
-          content: [
-            {
-              type: "paragraph",
-              content: [{ type: "text", text: comment }],
-            },
-          ],
-        },
-      }),
-    }
-  );
-
-  if (!response.ok) {
-    console.error("Failed to post JIRA comment:", await response.text());
-  }
+function extractProjectKey(issueKey: string): string {
+  const match = issueKey.match(/^([A-Z]+)-\d+$/i);
+  return match ? match[1].toUpperCase() : issueKey.split("-")[0].toUpperCase();
 }
 
 /**
@@ -257,11 +176,12 @@ app.post("/webhook/jira", jiraWebhookAuth, async (req, res) => {
     }
 
     // Create job
-    const job: Job = {
+    const job: JiraJob = {
       issueKey: payload.issue.key,
       instruction,
       triggeredBy: payload.comment.author.displayName,
       source: "jira",
+      projectKey: extractProjectKey(payload.issue.key),
     };
 
     // Add to queue
@@ -276,7 +196,7 @@ app.post("/webhook/jira", jiraWebhookAuth, async (req, res) => {
     console.log(`Job queued for ${job.issueKey}: ${job.instruction}`);
 
     // Post acknowledgment to JIRA
-    await postJiraComment(job.issueKey, "🤓 Okie dokie!");
+    await postJiraComment(jiraCredentials, job.issueKey, "🤓 Okie dokie!");
 
     return res.status(200).json({ status: "queued", issueKey: job.issueKey });
   } catch (error) {
@@ -284,39 +204,6 @@ app.post("/webhook/jira", jiraWebhookAuth, async (req, res) => {
     return res.status(500).json({ error: "Internal server error" });
   }
 });
-
-/**
- * Post a comment to GitHub PR
- */
-async function postGitHubComment(
-  owner: string,
-  repo: string,
-  prNumber: number,
-  comment: string
-): Promise<void> {
-  if (!GITHUB_TOKEN) {
-    console.warn("GITHUB_TOKEN not configured - skipping comment");
-    return;
-  }
-
-  const response = await fetch(
-    `https://api.github.com/repos/${owner}/${repo}/issues/${prNumber}/comments`,
-    {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${GITHUB_TOKEN}`,
-        "Content-Type": "application/json",
-        Accept: "application/vnd.github+json",
-        "X-GitHub-Api-Version": "2022-11-28",
-      },
-      body: JSON.stringify({ body: comment }),
-    }
-  );
-
-  if (!response.ok) {
-    console.error("Failed to post GitHub comment:", await response.text());
-  }
-}
 
 /**
  * Get PR details including branch name
@@ -356,6 +243,11 @@ async function getPRDetails(
  */
 app.post("/webhook/github", githubWebhookAuth, async (req, res) => {
   try {
+    // Handle ping events (sent when webhook is first configured)
+    if (req.headers["x-github-event"] === "ping") {
+      return res.status(200).json({ status: "pong" });
+    }
+
     const payload = req.body as GitHubWebhookPayload;
 
     // Only process comment_created events on PRs
@@ -387,6 +279,7 @@ app.post("/webhook/github", githubWebhookAuth, async (req, res) => {
     const issueKey = extractIssueKeyFromBranch(prDetails.branch);
     if (!issueKey) {
       await postGitHubComment(
+        GITHUB_TOKEN,
         owner,
         repo,
         prNumber,
@@ -397,22 +290,17 @@ app.post("/webhook/github", githubWebhookAuth, async (req, res) => {
         .json({ status: "ignored", reason: "no issue key found in branch" });
     }
 
-    // Create GitHub context
-    const githubContext: GitHubContext = {
+    // Create job
+    const job: GitHubJob = {
+      issueKey,
+      instruction,
+      triggeredBy: payload.comment.user.login,
+      source: "github",
       owner,
       repo,
       prNumber,
       commentId: payload.comment.id,
       branch: prDetails.branch,
-    };
-
-    // Create job
-    const job: Job = {
-      issueKey,
-      instruction,
-      triggeredBy: payload.comment.user.login,
-      source: "github",
-      github: githubContext,
     };
 
     // Add to queue
@@ -429,7 +317,13 @@ app.post("/webhook/github", githubWebhookAuth, async (req, res) => {
     );
 
     // Post acknowledgment to GitHub PR
-    await postGitHubComment(owner, repo, prNumber, "🤓 Okie dokie!");
+    await postGitHubComment(
+      GITHUB_TOKEN,
+      owner,
+      repo,
+      prNumber,
+      "🤓 Okie dokie!"
+    );
 
     return res
       .status(200)

@@ -4,10 +4,18 @@
 
 ### Workflow
 
+Dexter can be triggered from two entry points:
+- **JIRA**: Comment `@dexter` on a ticket to create a new PR
+- **GitHub**: Comment `@dexter` on an existing PR to request updates
+
 ```mermaid
 flowchart TD
     subgraph JIRA["☁️ JIRA Cloud"]
         A[👤 Developer comments<br/><code>@dexter implement auth</code>]
+    end
+
+    subgraph GitHub["☁️ GitHub"]
+        G[👤 Developer comments on PR<br/><code>@dexter add tests</code>]
     end
 
     B[Webhook Server]
@@ -15,12 +23,13 @@ flowchart TD
     D[Workers]
 
     subgraph External["🔗 External Services"]
-        H[GitHub]
+        H[GitHub API]
         I[Claude API]
         J[JIRA API]
     end
 
-    A -->|webhook| B
+    A -->|/webhook/jira| B
+    G -->|/webhook/github| B
     B -->|queue.add| C
     C -->|worker.process| D
     D -->|MCP| J
@@ -28,7 +37,7 @@ flowchart TD
     D -->|generate code| I
 ```
 
-### End-to-End Example
+### End-to-End: JIRA to PR
 
 ```mermaid
 sequenceDiagram
@@ -52,6 +61,33 @@ sequenceDiagram
     System->>JIRA: Comment "🤓 Done! github.com/..."
 
     Dev->>GH: Review & merge PR
+```
+
+### End-to-End: GitHub PR Update
+
+```mermaid
+sequenceDiagram
+    actor Dev as Developer
+    participant GH as GitHub
+    participant System as Dexter
+    participant JIRA
+
+    Dev->>GH: Comment "@dexter add unit tests"
+    GH->>System: Webhook: issue_comment (on PR)
+    System->>System: Extract issue key from branch name
+    System->>System: Enqueue job
+    System->>GH: Comment "🤓 Okie dokie!"
+
+    Note over System: Worker picks up job
+
+    System->>JIRA: Fetch ticket context
+    System->>GH: Fetch PR details and comments
+    System->>GH: Clone repo, checkout existing branch
+    System->>System: Claude generates code
+    System->>GH: Push commits to branch
+    System->>GH: Comment "🤓 Done! <summary>"
+
+    Dev->>GH: Review updates & merge PR
 ```
 
 ## Worker Internals
@@ -80,6 +116,8 @@ flowchart LR
 
 ---
 
+### JIRA-Triggered Job (New PR)
+
 ```mermaid
 sequenceDiagram
     participant BullMQ as BullMQ
@@ -88,10 +126,10 @@ sequenceDiagram
     participant JIRA_MCP as JIRA MCP
     participant GH_MCP as GitHub MCP
 
-    BullMQ->>W: Job {issueKey, instruction}
+    BullMQ->>W: Job {issueKey, instruction, source: "jira"}
     Note over BullMQ: Auto-retries on failure
 
-    W->>Claude: Execute with prompt
+    W->>Claude: Execute with JIRA prompt
 
     Claude->>JIRA_MCP: Fetch ticket details
     Note over JIRA_MCP: Summary, description,<br/>comments, attachments
@@ -101,7 +139,7 @@ sequenceDiagram
     Note over Claude: Infer target repo<br/>from ticket context
     GH_MCP-->>Claude: Repo list
 
-    Claude->>Claude: git clone, checkout branch
+    Claude->>Claude: git clone, create new branch
     Claude->>Claude: Read codebase, make changes
     Claude->>Claude: git add, commit, push
 
@@ -114,17 +152,55 @@ sequenceDiagram
     W->>W: Cleanup workspace
 ```
 
+### GitHub-Triggered Job (Update PR)
+
+```mermaid
+sequenceDiagram
+    participant BullMQ as BullMQ
+    participant W as Worker
+    participant Claude as Claude Code CLI
+    participant JIRA_MCP as JIRA MCP
+    participant GH_MCP as GitHub MCP
+
+    BullMQ->>W: Job {issueKey, instruction, source: "github", github: {...}}
+    Note over BullMQ: Auto-retries on failure
+
+    W->>Claude: Execute with GitHub prompt
+
+    Claude->>JIRA_MCP: Fetch ticket details
+    Note over JIRA_MCP: Original context from<br/>linked JIRA ticket
+    JIRA_MCP-->>Claude: Rich ticket data
+
+    Claude->>GH_MCP: Fetch PR details and comments
+    Note over GH_MCP: Existing changes,<br/>review feedback
+    GH_MCP-->>Claude: PR context
+
+    Claude->>Claude: git clone, checkout existing branch
+    Claude->>Claude: Read codebase, make changes
+    Claude->>Claude: git add, commit, push
+
+    Note over Claude: PR auto-updates with new commits
+
+    Claude->>GH_MCP: Post summary comment on PR
+
+    Claude-->>W: Done
+    W->>W: Cleanup workspace
+```
+
 ---
 
 ## Required Credentials
 
-| Credential            | Purpose                            | Scope                        |
-| --------------------- | ---------------------------------- | ---------------------------- |
-| **JIRA API Token**    | JIRA MCP (fetch tickets, comments) | Read tickets, write comments |
-| **GitHub PAT**        | GitHub MCP + Git CLI               | `repo`, `workflow` scopes    |
-| **Anthropic API Key** | Claude Code CLI access             | Enterprise tier recommended  |
+| Credential                | Purpose                            | Scope                        |
+| ------------------------- | ---------------------------------- | ---------------------------- |
+| **JIRA API Token**        | JIRA MCP (fetch tickets, comments) | Read tickets, write comments |
+| **JIRA Webhook Secret**   | Verify JIRA webhook signatures     | Optional (for security)      |
+| **GitHub PAT**            | GitHub MCP + Git CLI               | `repo`, `workflow` scopes    |
+| **GitHub Webhook Secret** | Verify GitHub webhook signatures   | Optional (for security)      |
+| **Anthropic API Key**     | Claude Code CLI access             | Enterprise tier recommended  |
 
-> Both MCP servers and Git CLI authenticate via environment variables (`JIRA_API_TOKEN`, `GITHUB_TOKEN`).
+> MCP servers and Git CLI authenticate via environment variables (`JIRA_API_TOKEN`, `GITHUB_TOKEN`).
+> Webhook secrets are optional but recommended for production deployments.
 
 ---
 

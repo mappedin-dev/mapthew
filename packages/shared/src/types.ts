@@ -1,12 +1,25 @@
 /**
- * Source of the job trigger
+ * Base job data common to all sources
  */
-export type JobSource = "jira" | "github";
+export interface BaseJob {
+  issueKey: string;
+  instruction: string;
+  triggeredBy: string;
+}
 
 /**
- * GitHub context for PR-triggered jobs
+ * Job triggered from JIRA comment
  */
-export interface GitHubContext {
+export interface JiraJob extends BaseJob {
+  source: "jira";
+  projectKey: string;
+}
+
+/**
+ * Job triggered from GitHub PR comment
+ */
+export interface GitHubJob extends BaseJob {
+  source: "github";
   owner: string;
   repo: string;
   prNumber: number;
@@ -15,14 +28,39 @@ export interface GitHubContext {
 }
 
 /**
- * Job data stored in the queue
+ * Discriminated union of all job types
  */
-export interface Job {
-  issueKey: string;
-  instruction: string;
-  triggeredBy: string;
-  source: JobSource;
-  github?: GitHubContext;
+export type Job = JiraJob | GitHubJob;
+
+/**
+ * Type guard for JiraJob
+ */
+export function isJiraJob(job: Job): job is JiraJob {
+  return job.source === "jira";
+}
+
+/**
+ * Type guard for GitHubJob
+ */
+export function isGitHubJob(job: Job): job is GitHubJob {
+  return job.source === "github";
+}
+
+/**
+ * JIRA API credentials for posting comments
+ */
+export interface JiraCredentials {
+  baseUrl: string;
+  email: string;
+  apiToken: string;
+}
+
+/**
+ * Result of posting a comment (JIRA or GitHub)
+ */
+export interface CommentResult {
+  success: boolean;
+  error?: string;
 }
 
 /**

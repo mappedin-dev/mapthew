@@ -4,6 +4,8 @@ Your AI-powered intern that turns JIRA tickets into pull requests. Mention `@dex
 
 ## Using Dexter in JIRA
 
+Use Dexter to open PRs from an existing JIRA ticket.
+
 1. Navigate to any JIRA ticket
 2. Add a comment mentioning `@dexter` followed by your instruction:
    ```
@@ -17,7 +19,7 @@ Your AI-powered intern that turns JIRA tickets into pull requests. Mention `@dex
 
 ## Using Dexter in GitHub PR Comments
 
-Once Dexter has opened a PR, you can request updates by mentioning `@dexter` in a PR comment:
+Use Dexter to update an open PR in GitHub.
 
 1. Navigate to any PR created by Dexter (branch name should contain a JIRA ticket key like `dexter_DXTR-123`)
 2. Add a comment mentioning `@dexter` followed by your instruction:
@@ -48,13 +50,13 @@ Once Dexter has opened a PR, you can request updates by mentioning `@dexter` in 
 
 ## Credentials
 
-| Credential                | Purpose                                 |
-| ------------------------- | --------------------------------------- |
-| **JIRA API Token**        | Reading tickets and posting comments    |
-| **JIRA Webhook Secret**   | Verify webhook signatures (optional)    |
-| **GitHub PAT**            | `repo` and `workflow` scopes            |
+| Credential                | Purpose                                     |
+| ------------------------- | ------------------------------------------- |
+| **JIRA API Token**        | Reading tickets and posting comments        |
+| **JIRA Webhook Secret**   | Verify webhook signatures (optional)        |
+| **GitHub PAT**            | `repo` and `workflow` scopes                |
 | **GitHub Webhook Secret** | Verify GitHub webhook signatures (optional) |
-| **Anthropic API Key**     | Claude Code CLI                         |
+| **Anthropic API Key**     | Claude Code CLI                             |
 
 ## Setup
 

@@ -1,93 +1,44 @@
-import { createWorker, createQueue, type Job, type BullJob, type GitHubContext } from '@dexter/shared';
-import { invokeClaudeCode } from './claude.js';
-import fs from 'fs/promises';
-import path from 'path';
-import os from 'os';
+import {
+  createWorker,
+  type Job,
+  type BullJob,
+  isJiraJob,
+  isGitHubJob,
+  postJiraComment,
+  postGitHubComment,
+} from "@dexter/shared";
+import { invokeClaudeCode } from "./claude.js";
+import fs from "fs/promises";
+import path from "path";
+import os from "os";
 
-const REDIS_URL = process.env.REDIS_URL || 'redis://localhost:6379';
-const JIRA_BASE_URL = process.env.JIRA_BASE_URL || '';
-const JIRA_EMAIL = process.env.JIRA_EMAIL || '';
-const JIRA_API_TOKEN = process.env.JIRA_API_TOKEN || '';
-const GITHUB_TOKEN = process.env.GITHUB_TOKEN || '';
+const REDIS_URL = process.env.REDIS_URL || "redis://localhost:6379";
+const JIRA_BASE_URL = process.env.JIRA_BASE_URL || "";
+const JIRA_EMAIL = process.env.JIRA_EMAIL || "";
+const JIRA_API_TOKEN = process.env.JIRA_API_TOKEN || "";
+const GITHUB_TOKEN = process.env.GITHUB_TOKEN || "";
 
-/**
- * Post a comment to JIRA
- */
-async function postJiraComment(issueKey: string, comment: string): Promise<void> {
-  if (!JIRA_BASE_URL || !JIRA_EMAIL || !JIRA_API_TOKEN) {
-    console.warn('JIRA credentials not configured - skipping comment');
-    return;
-  }
-
-  const auth = Buffer.from(`${JIRA_EMAIL}:${JIRA_API_TOKEN}`).toString('base64');
-
-  const response = await fetch(
-    `${JIRA_BASE_URL}/rest/api/3/issue/${issueKey}/comment`,
-    {
-      method: 'POST',
-      headers: {
-        Authorization: `Basic ${auth}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        body: {
-          type: 'doc',
-          version: 1,
-          content: [
-            {
-              type: 'paragraph',
-              content: [{ type: 'text', text: comment }],
-            },
-          ],
-        },
-      }),
-    }
-  );
-
-  if (!response.ok) {
-    console.error('Failed to post JIRA comment:', await response.text());
-  }
-}
-
-/**
- * Post a comment to GitHub PR
- */
-async function postGitHubComment(
-  github: GitHubContext,
-  comment: string
-): Promise<void> {
-  if (!GITHUB_TOKEN) {
-    console.warn('GITHUB_TOKEN not configured - skipping comment');
-    return;
-  }
-
-  const response = await fetch(
-    `https://api.github.com/repos/${github.owner}/${github.repo}/issues/${github.prNumber}/comments`,
-    {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${GITHUB_TOKEN}`,
-        'Content-Type': 'application/json',
-        Accept: 'application/vnd.github+json',
-        'X-GitHub-Api-Version': '2022-11-28',
-      },
-      body: JSON.stringify({ body: comment }),
-    }
-  );
-
-  if (!response.ok) {
-    console.error('Failed to post GitHub comment:', await response.text());
-  }
-}
+// JIRA credentials for posting comments
+const jiraCredentials = {
+  baseUrl: JIRA_BASE_URL,
+  email: JIRA_EMAIL,
+  apiToken: JIRA_API_TOKEN,
+};
 
 /**
  * Post a comment to the appropriate source (JIRA or GitHub)
  */
 async function postComment(job: Job, comment: string): Promise<void> {
-  if (job.source === 'github' && job.github) {
-    await postGitHubComment(job.github, comment);
-  } else {
-    await postJiraComment(job.issueKey, comment);
+  if (isGitHubJob(job)) {
+    await postGitHubComment(
+      GITHUB_TOKEN,
+      job.owner,
+      job.repo,
+      job.prNumber,
+      comment
+    );
+  } else if (isJiraJob(job)) {
+    await postJiraComment(jiraCredentials, job.issueKey, comment);
   }
 }
 

@@ -19,6 +19,13 @@
 - [ ] Verify X happens when Y
 - [ ] Try and break Z
 
+# Architecture Changes
+
+<!-- REQUIRED -->
+<!-- If high level architecture has been changed, including addition or removal of services, or changing of how services interact. -->
+
+- [ ] Yes. ( **Requires updating the architecture documentation** )
+
 # Security Impact
 
 <!-- REQUIRED -->
