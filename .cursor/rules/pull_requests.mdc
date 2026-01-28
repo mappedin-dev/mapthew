@@ -3,7 +3,7 @@ description: opening pull requests
 alwaysApply: false
 ---
 
-Open pull requests using the GitHub CLI.
+Open pull requests using the GitHub CLI. See [GitHub CLI rules](./github_cli.mdc).
 
 When opening pull requests, the pull request title should follow conventional commit format. Always include the ticket number if available; it can usually be found in the branch name. If no ticket number is available, ask the user. If no ticket number is available still, then use a generic scope like "deps" or "ci".
 

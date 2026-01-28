@@ -47,4 +47,5 @@ function parseRedisUrl(url: string): { host: string; port: number } {
   };
 }
 
+export { Queue };
 export type { BullJob };

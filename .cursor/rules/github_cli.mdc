@@ -1,0 +1,14 @@
+---
+description: git push and GitHub CLI commands
+alwaysApply: false
+---
+
+Git push and gh CLI commands require `required_permissions: ["all"]` to bypass sandbox restrictions.
+
+The sandbox blocks macOS Keychain access, which prevents credential helpers from retrieving GitHub tokens. Using only `["network", "git_write"]` will fail with credential errors.
+
+For: `git push`, `git pull`, `git fetch`, `gh pr create`, `gh auth`, and similar commands, always use:
+
+```typescript
+required_permissions: ["all"];
+```

@@ -1,37 +1,22 @@
 import { spawn } from "child_process";
-import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
 import type { Job } from "@dexter/shared/types";
+import { buildPrompt } from "./prompt.js";
+import { getReadableId } from "./utils.js";
 
 // ES module equivalent of __dirname
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
-// Load instructions template at startup
-const instructionsPath = path.join(__dirname, "..", "instructions.txt");
-const instructionsTemplate = fs.readFileSync(instructionsPath, "utf-8");
-
 // MCP config path
 const mcpConfigPath = path.join(__dirname, "..", "mcp-config.json");
-
-/**
- * Build the prompt for Claude Code CLI
- */
-function buildPrompt(job: Job): string {
-  return instructionsTemplate
-    .replace(/\{\{issueKey\}\}/g, job.issueKey)
-    .replace(/\{\{triggeredBy\}\}/g, job.triggeredBy)
-    .replace(/\{\{instruction\}\}/g, job.instruction)
-    .replace(/\{\{timestamp\}\}/g, String(Date.now()))
-    .trim();
-}
 
 /**
  * Invoke Claude Code CLI to process a job
  */
 export async function invokeClaudeCode(
   job: Job,
-  workDir: string
+  workDir: string,
 ): Promise<{ success: boolean; output: string; error?: string }> {
   const prompt = buildPrompt(job);
 
@@ -52,7 +37,7 @@ export async function invokeClaudeCode(
       args.push("--model", process.env.CLAUDE_MODEL);
     }
 
-    console.log(`Invoking Claude Code CLI for ${job.issueKey}...`);
+    console.log(`Invoking Claude Code CLI for ${getReadableId(job)}...`);
 
     const proc = spawn("claude", args, {
       cwd: workDir,
