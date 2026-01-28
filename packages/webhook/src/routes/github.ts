@@ -46,7 +46,7 @@ router.post("/", githubWebhookAuth, async (req, res) => {
         .json({ status: "ignored", reason: "no @dexter trigger found" });
     }
 
-    const owner = payload.repository.owner.login;
+    const { login: owner } = payload.repository.owner;
     const repo = payload.repository.name;
     const prNumber = payload.issue.number;
 
@@ -64,14 +64,16 @@ router.post("/", githubWebhookAuth, async (req, res) => {
       backoff: { type: "exponential", delay: 5000 },
     });
 
-    console.log(`GitHub job queued for PR #${prNumber}: ${job.instruction}`);
+    console.log(
+      `Github Job queued: ${owner}/${repo}#${prNumber} - ${instruction}`,
+    );
 
     await postGitHubComment(
       GITHUB_TOKEN,
       owner,
       repo,
       prNumber,
-      "🤓 Okie dokie!"
+      "🤓 Okie dokie!",
     );
 
     return res.status(200).json({ status: "queued", prNumber });

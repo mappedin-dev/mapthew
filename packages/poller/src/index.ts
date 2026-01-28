@@ -1,12 +1,11 @@
 import { Redis } from "ioredis";
 import { createQueue } from "@dexter/shared/queue";
-import { type Job, extractDexterInstruction } from "@dexter/shared/types";
+import { type JiraJob, extractDexterInstruction } from "@dexter/shared/types";
 import {
   createJiraClient,
   searchRecentlyUpdatedIssues,
   getCommentText,
   type JiraClient,
-  type JiraComment,
 } from "@dexter/shared/jira";
 
 // Configuration
@@ -17,7 +16,7 @@ const JIRA_API_TOKEN = process.env.JIRA_API_TOKEN || "";
 const JIRA_POLL_PROJECTS = process.env.JIRA_POLL_PROJECTS || "";
 const JIRA_POLL_INTERVAL_MS = parseInt(
   process.env.JIRA_POLL_INTERVAL_MS || "30000",
-  10
+  10,
 );
 
 // Redis key for tracking processed comments (with 7 day TTL)
@@ -40,7 +39,7 @@ function parseRedisUrl(url: string): { host: string; port: number } {
  */
 async function isCommentProcessed(
   redis: Redis,
-  commentId: string
+  commentId: string,
 ): Promise<boolean> {
   const result = await redis.sismember(PROCESSED_COMMENTS_KEY, commentId);
   return result === 1;
@@ -51,7 +50,7 @@ async function isCommentProcessed(
  */
 async function markCommentProcessed(
   redis: Redis,
-  commentId: string
+  commentId: string,
 ): Promise<void> {
   await redis.sadd(PROCESSED_COMMENTS_KEY, commentId);
   // Refresh TTL on the set
@@ -65,7 +64,7 @@ async function processIssueComments(
   jiraClient: JiraClient,
   issueKey: string,
   redis: Redis,
-  queue: ReturnType<typeof createQueue>
+  queue: ReturnType<typeof createQueue>,
 ): Promise<number> {
   const commentsResult = await jiraClient.getIssueComments(issueKey);
   let jobsQueued = 0;
@@ -82,8 +81,10 @@ async function processIssueComments(
     // Check for @dexter mention
     const instruction = extractDexterInstruction(commentText);
     if (instruction) {
-      const job: Job = {
+      const job: JiraJob = {
+        source: "jira",
         issueKey,
+        projectKey: issueKey.split("-")[0].toUpperCase(),
         instruction,
         triggeredBy: comment.author.displayName,
       };
@@ -114,7 +115,7 @@ async function poll(
   jiraClient: JiraClient,
   projects: string[],
   redis: Redis,
-  queue: ReturnType<typeof createQueue>
+  queue: ReturnType<typeof createQueue>,
 ): Promise<void> {
   // Look back slightly longer than poll interval to avoid missing comments
   const sinceMinutes = Math.ceil((JIRA_POLL_INTERVAL_MS / 1000 / 60) * 2) + 1;
@@ -124,7 +125,7 @@ async function poll(
       const issues = await searchRecentlyUpdatedIssues(
         jiraClient,
         project,
-        sinceMinutes
+        sinceMinutes,
       );
 
       for (const issue of issues) {
@@ -154,7 +155,9 @@ async function main(): Promise<void> {
   }
 
   if (!JIRA_POLL_PROJECTS) {
-    console.error("JIRA_POLL_PROJECTS is required (comma-separated project keys)");
+    console.error(
+      "JIRA_POLL_PROJECTS is required (comma-separated project keys)",
+    );
     process.exit(1);
   }
 
