@@ -41,12 +41,12 @@ export interface JiraCommentsResult {
  */
 export function createJiraClient(config: JiraClientConfig) {
   const auth = Buffer.from(`${config.email}:${config.apiToken}`).toString(
-    "base64"
+    "base64",
   );
 
   async function request<T>(
     endpoint: string,
-    options: RequestInit = {}
+    options: RequestInit = {},
   ): Promise<T> {
     const url = `${config.baseUrl}${endpoint}`;
     const response = await fetch(url, {
@@ -63,14 +63,28 @@ export function createJiraClient(config: JiraClientConfig) {
       throw new Error(`JIRA API error ${response.status}: ${text}`);
     }
 
-    return response.json() as Promise<T>;
+    // Handle empty responses (e.g., 204 No Content from PUT requests)
+    const contentLength = response.headers.get("content-length");
+    if (response.status === 204 || contentLength === "0") {
+      return undefined as T;
+    }
+
+    const text = await response.text();
+    if (!text) {
+      return undefined as T;
+    }
+
+    return JSON.parse(text) as T;
   }
 
   return {
     /**
      * Search for issues using JQL (uses new /search/jql endpoint)
      */
-    async searchIssues(jql: string, maxResults = 50): Promise<JiraSearchResult> {
+    async searchIssues(
+      jql: string,
+      maxResults = 50,
+    ): Promise<JiraSearchResult> {
       return request<JiraSearchResult>(`/rest/api/3/search/jql`, {
         method: "POST",
         body: JSON.stringify({
@@ -86,7 +100,7 @@ export function createJiraClient(config: JiraClientConfig) {
      */
     async getIssueComments(issueKey: string): Promise<JiraCommentsResult> {
       return request<JiraCommentsResult>(
-        `/rest/api/3/issue/${issueKey}/comment`
+        `/rest/api/3/issue/${issueKey}/comment`,
       );
     },
 
@@ -116,7 +130,7 @@ export function createJiraClient(config: JiraClientConfig) {
      */
     async updateLabels(
       issueKey: string,
-      options: { add?: string[]; remove?: string[] }
+      options: { add?: string[]; remove?: string[] },
     ): Promise<void> {
       const update: { labels: Array<{ add?: string; remove?: string }> } = {
         labels: [],
@@ -146,7 +160,7 @@ export function createJiraClient(config: JiraClientConfig) {
      * Get available transitions for an issue
      */
     async getTransitions(
-      issueKey: string
+      issueKey: string,
     ): Promise<Array<{ id: string; name: string }>> {
       const result = await request<{
         transitions: Array<{ id: string; name: string }>;
@@ -161,12 +175,12 @@ export function createJiraClient(config: JiraClientConfig) {
     async transitionTo(issueKey: string, statusName: string): Promise<boolean> {
       const transitions = await this.getTransitions(issueKey);
       const transition = transitions.find(
-        (t) => t.name.toLowerCase() === statusName.toLowerCase()
+        (t) => t.name.toLowerCase() === statusName.toLowerCase(),
       );
 
       if (!transition) {
         console.warn(
-          `Transition to "${statusName}" not available for ${issueKey}. Available: ${transitions.map((t) => t.name).join(", ")}`
+          `Transition to "${statusName}" not available for ${issueKey}. Available: ${transitions.map((t) => t.name).join(", ")}`,
         );
         return false;
       }
@@ -188,7 +202,7 @@ export type JiraClient = ReturnType<typeof createJiraClient>;
 export async function searchRecentlyUpdatedIssues(
   client: JiraClient,
   project: string,
-  sinceMinutes: number
+  sinceMinutes: number,
 ): Promise<JiraIssue[]> {
   const jql = `project = ${project} AND updated >= -${sinceMinutes}m ORDER BY updated DESC`;
   const result = await client.searchIssues(jql);
