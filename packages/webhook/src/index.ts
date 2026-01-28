@@ -2,7 +2,6 @@ import express, { type Request, type Response } from "express";
 import { createBullBoard } from "@bull-board/api";
 import { BullMQAdapter } from "@bull-board/api/bullMQAdapter";
 import { ExpressAdapter } from "@bull-board/express";
-import { createQueue } from "@dexter/shared/queue";
 import {
   PORT,
   queue,
