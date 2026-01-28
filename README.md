@@ -84,27 +84,6 @@ Use Dexter to update an open PR in GitHub.
    - **JIRA**: Point to `/webhook/jira` for ticket comment triggers
    - **GitHub**: Point to `/webhook/github` for PR comment triggers (configure for `issue_comment` events)
 
-## Local Development (Polling Mode)
-
-If you don't have JIRA admin access to configure webhooks, use polling mode instead:
-
-1. Add the projects you want to poll to your `.env`:
-
-   ```bash
-   JIRA_POLL_PROJECTS=DXTR,OTHER    # Comma-separated project keys
-   JIRA_POLL_INTERVAL_MS=30000      # Optional, defaults to 30 seconds
-   ```
-
-2. Start with polling mode:
-
-   ```bash
-   pnpm dev:poll
-   ```
-
-   This runs Redis, the poller, and the worker (no webhook server).
-
-The poller queries JIRA for new `@dexter` comments and adds jobs to the same queue as the webhook would.
-
 ## Local Testing
 
 ###

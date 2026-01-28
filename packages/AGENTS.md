@@ -6,7 +6,6 @@ Monorepo packages containing production code.
 
 - `shared/` — Common code: BullMQ queue, types, API utilities
 - `webhook/` — HTTP server receiving webhooks, enqueues jobs to Redis
-- `poller/` — Polls JIRA API for @dexter comments, alternative to webhook for local dev
 - `worker/` — BullMQ worker processing jobs via Claude Code CLI + MCP servers
 
 ## Development

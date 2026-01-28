@@ -19,10 +19,6 @@
     "./api": {
       "import": "./dist/api.js",
       "types": "./dist/api.d.ts"
-    },
-    "./jira": {
-      "import": "./dist/jira.js",
-      "types": "./dist/jira.d.ts"
     }
   },
   "scripts": {

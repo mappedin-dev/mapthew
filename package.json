@@ -6,7 +6,6 @@
     "dev": "docker-compose up",
     "dev:down": "docker-compose down",
     "dev:rebuild": "docker-compose down && docker-compose build --no-cache && docker-compose up",
-    "dev:poll": "docker compose --profile poll up redis poller worker",
     "build": "pnpm -r build",
     "lint": "pnpm -r lint",
     "test": "pnpm -r test",
@@ -14,7 +13,6 @@
     "shared": "pnpm --filter @dexter/shared",
     "webhook": "pnpm --filter @dexter/webhook",
     "worker": "pnpm --filter @dexter/worker",
-    "poller": "pnpm --filter @dexter/poller",
     "mcp": "pnpm --filter @dexter/integration-tests-mcp",
     "tunnel": "cloudflared tunnel --config cloudflare-tunnel-config.yml run"
   },

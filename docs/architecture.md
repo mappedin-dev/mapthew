@@ -15,10 +15,7 @@ flowchart TD
         A["Developer comments @dexter"]
     end
 
-    subgraph triggers ["Trigger Options"]
-        B[Webhook Server]
-        P[Poller Service]
-    end
+    B[Webhook Server]
 
     subgraph GitHub["GitHub"]
         G[Developer comments on PR<br/><code>@dexter add tests</code>]
@@ -34,24 +31,13 @@ flowchart TD
     end
 
     A -->|/webhook/jira| B
-    A -.->|"poll (API)"| P
     G -->|/webhook/github| B
     B -->|queue.add| C
-    P -->|queue.add| C
     C -->|worker.process| D
     D -->|MCP| J
     D -->|MCP| H
     D -->|generate code| I
 ```
-
-### Trigger Options
-
-| Mode        | Command         | Use Case                                             |
-| ----------- | --------------- | ---------------------------------------------------- |
-| **Webhook** | `pnpm dev`      | Production, requires JIRA admin to configure webhook |
-| **Polling** | `pnpm dev:poll` | Local dev, no JIRA admin access needed               |
-
-Both modes add jobs to the same BullMQ queue. The worker processes jobs identically regardless of how they were triggered.
 
 ### End-to-End Example
 

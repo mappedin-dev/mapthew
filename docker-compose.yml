@@ -59,26 +59,3 @@ services:
     env_file: .env
     depends_on:
       - redis
-
-  poller:
-    container_name: poller
-    profiles: ["poll"]
-    build:
-      context: .
-      dockerfile: packages/poller/Dockerfile
-      target: dev
-    networks:
-      - dexter
-    volumes:
-      - ./packages/shared/src:/app/packages/shared/src
-      - ./packages/poller/src:/app/packages/poller/src
-    environment:
-      - REDIS_URL=redis://redis:6379
-      - JIRA_BASE_URL
-      - JIRA_EMAIL
-      - JIRA_API_TOKEN
-      - JIRA_POLL_PROJECTS
-      - JIRA_POLL_INTERVAL_MS
-    env_file: .env
-    depends_on:
-      - redis
