@@ -69,12 +69,12 @@ async function postComment(job: Job, comment: string): Promise<void> {
 async function postProcessJiraIssue(issueKey: string): Promise<void> {
   if (!jiraClient) return;
 
-  try {
-    // Update labels
-    const labelsToAdd = JIRA_LABEL_ADD ? [JIRA_LABEL_ADD] : [];
-    const labelsToRemove = JIRA_LABEL_REMOVE ? [JIRA_LABEL_REMOVE] : [];
+  // Update labels (independent of transition)
+  const labelsToAdd = JIRA_LABEL_ADD ? [JIRA_LABEL_ADD.trim()] : [];
+  const labelsToRemove = JIRA_LABEL_REMOVE ? [JIRA_LABEL_REMOVE.trim()] : [];
 
-    if (labelsToAdd.length > 0 || labelsToRemove.length > 0) {
+  if (labelsToAdd.length > 0 || labelsToRemove.length > 0) {
+    try {
       await jiraClient.updateLabels(issueKey, {
         add: labelsToAdd,
         remove: labelsToRemove,
@@ -82,17 +82,22 @@ async function postProcessJiraIssue(issueKey: string): Promise<void> {
       console.log(
         `Updated labels for ${issueKey}: +${labelsToAdd.join(",")} -${labelsToRemove.join(",")}`,
       );
+    } catch (error) {
+      console.error(`Failed to update labels for ${issueKey}:`, error);
     }
+  }
 
-    // Transition to configured status
-    if (JIRA_DONE_STATUS) {
-      const success = await jiraClient.transitionTo(issueKey, JIRA_DONE_STATUS);
+  // Transition to configured status (independent of labels)
+  const doneStatus = JIRA_DONE_STATUS?.trim();
+  if (doneStatus) {
+    try {
+      const success = await jiraClient.transitionTo(issueKey, doneStatus);
       if (success) {
-        console.log(`Transitioned ${issueKey} to "${JIRA_DONE_STATUS}"`);
+        console.log(`Transitioned ${issueKey} to "${doneStatus}"`);
       }
+    } catch (error) {
+      console.error(`Failed to transition ${issueKey}:`, error);
     }
-  } catch (error) {
-    console.error(`Failed to post-process JIRA issue ${issueKey}:`, error);
   }
 }
 
