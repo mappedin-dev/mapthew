@@ -279,6 +279,23 @@ describe("createJiraClient", () => {
     });
   });
 
+  describe("getTransitions", () => {
+    it("returns empty array when response is empty", async () => {
+      const mockFetch = vi.fn().mockResolvedValue({
+        ok: true,
+        status: 204,
+        headers: new Headers(),
+        text: () => Promise.resolve(""),
+      });
+      vi.stubGlobal("fetch", mockFetch);
+
+      const client = createJiraClient(mockConfig);
+      const result = await client.getTransitions("TEST-1");
+
+      expect(result).toEqual([]);
+    });
+  });
+
   describe("transitionTo", () => {
     it("returns false when transition not available", async () => {
       const mockFetch = vi.fn().mockResolvedValue({
