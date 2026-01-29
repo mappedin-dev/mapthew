@@ -1,7 +1,13 @@
+networks:
+  dexter:
+    name: dexter-network
+
 services:
   redis:
     container_name: redis
     image: redis:7-alpine
+    networks:
+      - dexter
     ports:
       - "${REDIS_PORT:-6379}:6379"
 
@@ -11,17 +17,21 @@ services:
       context: .
       dockerfile: packages/webhook/Dockerfile
       target: dev
+    networks:
+      - dexter
     ports:
-      - "3000:3000"
+      - "${WEBHOOK_PORT:-3000}:${WEBHOOK_PORT:-3000}"
     volumes:
-      - ./packages/shared:/app/packages/shared
+      - ./packages/shared/src:/app/packages/shared/src
       - ./packages/webhook/src:/app/packages/webhook/src
     environment:
+      - PORT=${WEBHOOK_PORT:-3000}
       - REDIS_URL=redis://redis:6379
       - JIRA_BASE_URL
       - JIRA_EMAIL
       - JIRA_API_TOKEN
       - JIRA_WEBHOOK_SECRET
+      - GITHUB_WEBHOOK_SECRET
     env_file: .env
     depends_on:
       - redis
@@ -32,9 +42,12 @@ services:
       context: .
       dockerfile: packages/worker/Dockerfile
       target: dev
+    networks:
+      - dexter
     volumes:
-      - ./packages/shared:/app/packages/shared
+      - ./packages/shared/src:/app/packages/shared/src
       - ./packages/worker/src:/app/packages/worker/src
+      - ./packages/worker/instructions:/app/packages/worker/instructions
     environment:
       - REDIS_URL=redis://redis:6379
       - JIRA_BASE_URL

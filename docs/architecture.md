@@ -20,10 +20,11 @@ flowchart TD
     end
 
     B[Webhook Server]
+
     C[("BullMQ / Redis")]
     D[Workers]
 
-    subgraph External["🔗 External Services"]
+    subgraph External["External Services"]
         H[GitHub API]
         I[Claude API]
         J[JIRA API]

@@ -24,15 +24,23 @@ Your task:
 
 4. Implement the requested changes based on the instruction and feedback.
 
-5. Commit your changes with a clear message following conventional commit format.
+5. Verify your changes don't introduce regressions:
+   - If you modified dependencies (package.json, requirements.txt, etc.), ensure install and build still work
+   - Run the linter/formatter if available (e.g., `pnpm lint`, `pnpm fmt`, `npm run prettier`, etc.) and fix any issues
+   - Run relevant tests only - don't run the entire test suite if you only changed one module
+     - Look for test files related to the files you changed (e.g., `foo.test.ts` for `foo.ts`)
+     - Use test filtering if available (e.g., `pnpm test -- --filter=module-name`)
+   - If tests fail due to your changes, fix them before proceeding
+
+6. Commit your changes with a clear message following conventional commit format.
    - e.g. fix: address PR feedback on validation
 
-6. Push the changes to the existing branch.
+7. Push the changes to the existing branch.
    - The PR will automatically update with your new commits
 
-7. If the repository itself has any AGENTS.md or .cursor/rules, those take priority over these instructions.
+8. If the repository itself has any AGENTS.md or .cursor/rules, those take priority over these instructions.
 
-8. Post a comment on the GitHub PR summarizing what changes you made.
+9. Post a comment on the GitHub PR summarizing what changes you made.
    - Comment: "🤓 Done! I've pushed the following changes: <brief summary>"
 
 Keep the following in mind:

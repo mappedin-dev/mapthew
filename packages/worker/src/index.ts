@@ -1,11 +1,11 @@
 import {
   createWorker,
-  type Job,
   type BullJob,
-  isJiraJob,
   isGitHubJob,
-  postJiraComment,
+  isJiraJob,
   postGitHubComment,
+  postJiraComment,
+  type Job,
   getBotName,
 } from "@mapthew/shared";
 import { invokeClaudeCode } from "./claude.js";

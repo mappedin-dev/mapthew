@@ -54,7 +54,7 @@ RUN pnpm install --frozen-lockfile --prod
 COPY --chown=worker:worker --from=builder /app/packages/shared/dist ./packages/shared/dist
 COPY --chown=worker:worker --from=builder /app/packages/worker/dist ./packages/worker/dist
 COPY --chown=worker:worker packages/worker/mcp-config.json ./packages/worker/
-COPY --chown=worker:worker packages/worker/instructions.txt ./packages/worker/
+COPY --chown=worker:worker packages/worker/instructions ./packages/worker/instructions
 
 USER worker
 WORKDIR /app/packages/worker

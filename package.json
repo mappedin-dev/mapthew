@@ -8,6 +8,7 @@
     "dev:rebuild": "docker-compose down && docker-compose build --no-cache && docker-compose up",
     "build": "pnpm -r build",
     "lint": "pnpm -r lint",
+    "test": "pnpm -r --if-present test",
     "clean": "pnpm -r clean && rm -rf node_modules",
     "shared": "pnpm --filter @mapthew/shared",
     "webhook": "pnpm --filter @mapthew/webhook",
