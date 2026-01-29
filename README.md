@@ -42,6 +42,7 @@ Use Mapthew to update an open PR in GitHub.
   ```
   @mapthew implement this in https://github.com/org/repo
   ```
+- Mapthew maintains session context across interactions, allowing for follow-up comments on PRs
 
 ## Prerequisites
 
