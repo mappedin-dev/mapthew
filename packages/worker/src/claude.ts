@@ -1,7 +1,7 @@
 import { spawn } from "child_process";
 import path from "path";
 import { fileURLToPath } from "url";
-import type { Job } from "@dexter/shared";
+import type { Job } from "@mapthew/shared";
 import { buildPrompt } from "./prompt.js";
 import { getReadableId } from "./utils.js";
 

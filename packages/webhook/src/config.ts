@@ -1,4 +1,4 @@
-import { createQueue, Queue, type Job } from "@dexter/shared";
+import { createQueue, Queue, type Job } from "@mapthew/shared";
 
 export const PORT = process.env.PORT || 3000;
 export const REDIS_URL = process.env.REDIS_URL || "redis://localhost:6379";

@@ -6,24 +6,25 @@
 @baseUrl = http://localhost:3000
 @tunnelUrl = https://ben.mappedin.io
 @ticketKey = DXTR-3
+@botName = mapthew
 
 ### Health Check
 GET {{baseUrl}}/health
 
-### Trigger Dexter Workflow (simulated JIRA comment)
+### Trigger Bot Workflow (simulated JIRA comment)
 POST {{baseUrl}}/webhook/jira
 Content-Type: application/json
 
 {
   "webhookEvent": "comment_created",
   "comment": {
-    "body": "@dexter implement the change described in this ticket",
+    "body": "@{{botName}} implement the change described in this ticket",
     "author": { "displayName": "Test Developer" }
   },
   "issue": { "key": "{{ticketKey}}" }
 }
 
-### Non-dexter comment (should be ignored)
+### Non-bot comment (should be ignored)
 POST {{baseUrl}}/webhook/jira
 Content-Type: application/json
 
@@ -43,7 +44,7 @@ Content-Type: application/json
 {
   "webhookEvent": "issue_updated",
   "comment": {
-    "body": "@dexter this won't trigger because event type is wrong",
+    "body": "@{{botName}} this won't trigger because event type is wrong",
     "author": { "displayName": "Test Developer" }
   },
   "issue": { "key": "{{ticketKey}}" }
@@ -60,7 +61,7 @@ Content-Type: application/json
 {
   "webhookEvent": "comment_created",
   "comment": {
-    "body": "Test cloudflare tunnel, dexter should ignore this",
+    "body": "Test cloudflare tunnel, {{botName}} should ignore this",
     "author": { "displayName": "Tunnel Test" }
   },
   "issue": { "key": "{{ticketKey}}" }

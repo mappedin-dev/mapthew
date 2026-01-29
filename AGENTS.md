@@ -19,3 +19,7 @@ When adding new AGENTS.md files, keep the contents as concise as possible.
 AGENTS.md files should be optimized for agents, but remain human readable.
 
 Outline and summarize content so context overhead in minimized.
+
+# Claude Code
+
+If you are Claude Code, read `AGENTS.md` and `.cursor/rules/*.(md|mdc)` files in this repo for architecture and development guidelines.

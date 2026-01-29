@@ -1,5 +1,5 @@
 {
-  "name": "@dexter/webhook",
+  "name": "@mapthew/webhook",
   "version": "0.0.1",
   "private": true,
   "type": "module",
@@ -13,7 +13,7 @@
   "dependencies": {
     "@bull-board/api": "^6.0.0",
     "@bull-board/express": "^6.0.0",
-    "@dexter/shared": "workspace:*",
+    "@mapthew/shared": "workspace:*",
     "express": "^4.21.0"
   },
   "devDependencies": {

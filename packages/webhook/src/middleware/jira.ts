@@ -1,5 +1,5 @@
 import type { Request, Response, NextFunction } from "express";
-import { verifyHmacSignature } from "@dexter/shared";
+import { verifyHmacSignature } from "@mapthew/shared";
 import { JIRA_WEBHOOK_SECRET } from "../config.js";
 import type { RequestWithRawBody } from "./index.js";
 

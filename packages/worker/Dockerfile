@@ -42,8 +42,8 @@ RUN pnpm install --frozen-lockfile
 COPY packages/shared ./packages/shared
 COPY packages/worker ./packages/worker
 
-RUN pnpm --filter @dexter/shared build && \
-    pnpm --filter @dexter/worker build
+RUN pnpm --filter @mapthew/shared build && \
+    pnpm --filter @mapthew/worker build
 
 # ============================================
 # Production stage

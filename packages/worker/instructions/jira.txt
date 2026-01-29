@@ -28,7 +28,7 @@ Your task:
    - Look at the project key, board, labels, components, and description
    - Find the most relevant repository
 
-5. Clone the repository and create a new branch named: dexter_{{issueKey}}
+5. Clone the repository and create a new branch named: {{branchPrefix}}_{{issueKey}}
    - If a branch with that name already exists, add "-1", "-2", etc. as a prefix until there is no collision
 
 6. Implement the requested changes based on the ticket context and instruction.

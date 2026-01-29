@@ -6,7 +6,8 @@ import {
   isGitHubJob,
   postJiraComment,
   postGitHubComment,
-} from "@dexter/shared";
+  getBotName,
+} from "@mapthew/shared";
 import { invokeClaudeCode } from "./claude.js";
 import { getReadableId } from "./utils.js";
 import fs from "fs/promises";
@@ -49,7 +50,10 @@ async function postComment(job: Job, comment: string): Promise<void> {
 async function createTempWorkspace(jobId: string): Promise<string> {
   // Sanitize jobId for filesystem (replace / with -)
   const sanitized = jobId.replace(/\//g, "-");
-  const tempDir = path.join(os.tmpdir(), `dexter-${sanitized}-${Date.now()}`);
+  const tempDir = path.join(
+    os.tmpdir(),
+    `${getBotName()}-${sanitized}-${Date.now()}`
+  );
   await fs.mkdir(tempDir, { recursive: true });
   return tempDir;
 }
