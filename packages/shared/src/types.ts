@@ -25,12 +25,38 @@ export interface GitHubJob extends BaseJob {
   owner: string;
   repo: string;
   prNumber: number;
+  /** PR branch name (used to extract Jira issue key for session linking) */
+  branchName?: string;
+}
+
+/**
+ * Session cleanup job (triggered by PR merge)
+ */
+export interface SessionCleanupJob {
+  type: "session-cleanup";
+  issueKey: string;
+  reason: "pr-merged" | "manual";
+  owner?: string;
+  repo?: string;
+  prNumber?: number;
 }
 
 /**
  * Discriminated union of all job types
  */
 export type Job = JiraJob | GitHubJob;
+
+/**
+ * Union of all queue job types (includes cleanup jobs)
+ */
+export type QueueJob = Job | SessionCleanupJob;
+
+/**
+ * Type guard for SessionCleanupJob
+ */
+export function isSessionCleanupJob(job: QueueJob): job is SessionCleanupJob {
+  return "type" in job && job.type === "session-cleanup";
+}
 
 /**
  * Type guard for JiraJob

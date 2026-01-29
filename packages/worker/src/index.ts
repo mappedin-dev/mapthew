@@ -3,16 +3,22 @@ import {
   type BullJob,
   isGitHubJob,
   isJiraJob,
+  isSessionCleanupJob,
   postGitHubComment,
   postJiraComment,
   type Job,
+  type QueueJob,
   getBotName,
+  getOrCreateWorkspace,
+  hasExistingSession,
+  canCreateSession,
+  waitForSessionSlot,
+  workspaceExists,
+  cleanupWorkspace,
+  getMaxSessions,
 } from "@mapthew/shared";
 import { invokeClaudeCode } from "./claude.js";
-import { getReadableId } from "./utils.js";
-import fs from "fs/promises";
-import path from "path";
-import os from "os";
+import { getReadableId, getIssueKey } from "./utils.js";
 
 const REDIS_URL = process.env.REDIS_URL || "redis://localhost:6379";
 const JIRA_BASE_URL = process.env.JIRA_BASE_URL || "";
@@ -37,7 +43,7 @@ async function postComment(job: Job, comment: string): Promise<void> {
       job.owner,
       job.repo,
       job.prNumber,
-      comment
+      comment,
     );
   } else if (isJiraJob(job)) {
     await postJiraComment(jiraCredentials, job.issueKey, comment);
@@ -45,53 +51,68 @@ async function postComment(job: Job, comment: string): Promise<void> {
 }
 
 /**
- * Create a temporary workspace directory
+ * Process a regular job using persistent workspaces for session reuse
  */
-async function createTempWorkspace(jobId: string): Promise<string> {
-  // Sanitize jobId for filesystem (replace / with -)
-  const sanitized = jobId.replace(/\//g, "-");
-  const tempDir = path.join(
-    os.tmpdir(),
-    `${getBotName()}-${sanitized}-${Date.now()}`
-  );
-  await fs.mkdir(tempDir, { recursive: true });
-  return tempDir;
-}
-
-/**
- * Clean up a workspace directory
- */
-async function cleanupWorkspace(workDir: string): Promise<void> {
-  try {
-    await fs.rm(workDir, { recursive: true, force: true });
-  } catch (error) {
-    console.warn(`Failed to cleanup workspace ${workDir}:`, error);
-  }
-}
-
-/**
- * Process a job
- */
-async function processJob(bullJob: BullJob<Job>): Promise<void> {
-  const job = bullJob.data;
+async function processRegularJob(job: Job): Promise<void> {
   const jobId = getReadableId(job);
+  const issueKey = getIssueKey(job);
+
   console.log(`Processing job for ${jobId}: ${job.instruction}`);
+  console.log(`[Session] Issue key: ${issueKey}`);
 
-  const workDir = await createTempWorkspace(jobId);
-  console.log(`Created workspace: ${workDir}`);
+  // Check if this job can reuse an existing session
+  const hasExisting = await workspaceExists(issueKey);
 
-  try {
-    const result = await invokeClaudeCode(job, workDir);
-
-    if (!result.success) {
-      throw new Error(result.error || "Claude Code CLI failed");
-    }
-
-    console.log(`Job completed for ${jobId}`);
-  } finally {
-    await cleanupWorkspace(workDir);
-    console.log(`Cleaned up workspace: ${workDir}`);
+  // If no existing workspace and we're at capacity, wait for a slot
+  if (!hasExisting && !(await canCreateSession())) {
+    console.log(
+      `[Session] At max capacity (${getMaxSessions()}), waiting for slot...`,
+    );
+    await waitForSessionSlot();
+    console.log(`[Session] Slot available, proceeding`);
   }
+
+  // Get or create the persistent workspace
+  const workDir = await getOrCreateWorkspace(issueKey);
+  console.log(`[Session] Workspace: ${workDir}`);
+
+  // Check if there's an existing Claude session to resume
+  const hasSession = await hasExistingSession(workDir);
+  if (hasSession) {
+    console.log(`[Session] Found existing session, will resume`);
+  } else {
+    console.log(`[Session] No existing session, starting fresh`);
+  }
+
+  // Invoke Claude with session context
+  const result = await invokeClaudeCode(job, workDir, { hasSession });
+
+  if (!result.success) {
+    throw new Error(result.error || "Claude Code CLI failed");
+  }
+
+  console.log(`Job completed for ${jobId}`);
+  // Note: We intentionally do NOT clean up the workspace here
+  // Workspaces are cleaned up when PRs are merged or manually
+}
+
+/**
+ * Process all job types (regular jobs and cleanup jobs)
+ */
+async function processJob(bullJob: BullJob<QueueJob>): Promise<void> {
+  const job = bullJob.data;
+
+  // Handle session cleanup jobs
+  if (isSessionCleanupJob(job)) {
+    console.log(
+      `[Session] Processing cleanup for ${job.issueKey} (reason: ${job.reason})`,
+    );
+    await cleanupWorkspace(job.issueKey);
+    return;
+  }
+
+  // Handle regular jobs
+  await processRegularJob(job);
 }
 
 // Create worker
@@ -100,17 +121,35 @@ const worker = createWorker(REDIS_URL, processJob);
 // Handle failed jobs - post error to appropriate source
 worker.on("failed", async (job, err) => {
   if (job) {
-    console.error(`Job failed for ${getReadableId(job.data)}:`, err.message);
-    await postComment(job.data, `🤓 Oops, I hit an error: ${err.message}`);
+    const data = job.data as QueueJob;
+
+    // Don't post comments for cleanup job failures
+    if (isSessionCleanupJob(data)) {
+      console.error(
+        `[Session] Cleanup failed for ${data.issueKey}:`,
+        err.message,
+      );
+      return;
+    }
+
+    console.error(`Job failed for ${getReadableId(data)}:`, err.message);
+    await postComment(data, `🤓 Oops, I hit an error: ${err.message}`);
   }
 });
 
 // Handle completed jobs
 worker.on("completed", (job) => {
-  console.log(`Job completed: ${getReadableId(job.data)}`);
+  const data = job.data as QueueJob;
+
+  if (isSessionCleanupJob(data)) {
+    console.log(`[Session] Cleanup completed: ${data.issueKey}`);
+    return;
+  }
+
+  console.log(`Job completed: ${getReadableId(data)}`);
 });
 
-console.log("Worker started, waiting for jobs...");
+console.log(`Worker started as @${getBotName()}, waiting for jobs...`);
 
 // Graceful shutdown
 process.on("SIGTERM", async () => {
