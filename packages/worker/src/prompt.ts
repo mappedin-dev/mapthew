@@ -1,7 +1,13 @@
 import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
-import { type Job, isGitHubJob, isJiraJob } from "@dexter/shared";
+import {
+  type Job,
+  isGitHubJob,
+  isJiraJob,
+  getBotName,
+  getBranchPrefix,
+} from "@mapthew/shared";
 
 // ES module equivalent of __dirname
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -32,6 +38,8 @@ const githubInstructionsTemplate = fs.readFileSync(
 export function buildPrompt(job: Job): string {
   if (isGitHubJob(job)) {
     return githubInstructionsTemplate
+      .replace(/\{\{botName\}\}/g, getBotName())
+      .replace(/\{\{branchPrefix\}\}/g, getBranchPrefix())
       .replace(/\{\{triggeredBy\}\}/g, job.triggeredBy)
       .replace(/\{\{instruction\}\}/g, job.instruction)
       .replace(/\{\{owner\}\}/g, job.owner)
@@ -43,6 +51,8 @@ export function buildPrompt(job: Job): string {
 
   if (isJiraJob(job)) {
     return jiraInstructionsTemplate
+      .replace(/\{\{botName\}\}/g, getBotName())
+      .replace(/\{\{branchPrefix\}\}/g, getBranchPrefix())
       .replace(/\{\{issueKey\}\}/g, job.issueKey)
       .replace(/\{\{triggeredBy\}\}/g, job.triggeredBy)
       .replace(/\{\{instruction\}\}/g, job.instruction)

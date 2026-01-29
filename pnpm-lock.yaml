@@ -51,7 +51,7 @@ importers:
       '@bull-board/express':
         specifier: ^6.0.0
         version: 6.16.4
-      '@dexter/shared':
+      '@mapthew/shared':
         specifier: workspace:*
         version: link:../shared
       express:
@@ -73,7 +73,7 @@ importers:
 
   packages/worker:
     dependencies:
-      '@dexter/shared':
+      '@mapthew/shared':
         specifier: workspace:*
         version: link:../shared
     devDependencies:

@@ -3,7 +3,7 @@ import {
   isJiraJob,
   isGitHubJob,
   isCommentCreatedEvent,
-  extractDexterInstruction,
+  extractBotInstruction,
   isGitHubPRCommentEvent,
   extractIssueKeyFromBranch,
   type JiraJob,
@@ -67,7 +67,7 @@ describe("isCommentCreatedEvent", () => {
     const payload: WebhookPayload = {
       webhookEvent: "comment_created",
       comment: {
-        body: "@dexter do something",
+        body: "@mapthew do something",
         author: { displayName: "Test User" },
       },
       issue: { key: "DXTR-123" },
@@ -79,7 +79,7 @@ describe("isCommentCreatedEvent", () => {
     const payload: WebhookPayload = {
       webhookEvent: "comment_updated",
       comment: {
-        body: "@dexter do something",
+        body: "@mapthew do something",
         author: { displayName: "Test User" },
       },
       issue: { key: "DXTR-123" },
@@ -88,24 +88,24 @@ describe("isCommentCreatedEvent", () => {
   });
 });
 
-describe("extractDexterInstruction", () => {
-  it("extracts instruction after @dexter", () => {
-    expect(extractDexterInstruction("@dexter implement auth")).toBe(
+describe("extractBotInstruction", () => {
+  it("extracts instruction after @mapthew", () => {
+    expect(extractBotInstruction("@mapthew implement auth")).toBe(
       "implement auth",
     );
   });
 
   it("is case insensitive", () => {
-    expect(extractDexterInstruction("@DEXTER implement auth")).toBe(
+    expect(extractBotInstruction("@MAPTHEW implement auth")).toBe(
       "implement auth",
     );
-    expect(extractDexterInstruction("@Dexter implement auth")).toBe(
+    expect(extractBotInstruction("@Mapthew implement auth")).toBe(
       "implement auth",
     );
   });
 
   it("handles extra whitespace", () => {
-    expect(extractDexterInstruction("@dexter   implement auth  ")).toBe(
+    expect(extractBotInstruction("@mapthew   implement auth  ")).toBe(
       "implement auth",
     );
   });
@@ -113,28 +113,28 @@ describe("extractDexterInstruction", () => {
   it("extracts from multiline comments", () => {
     const comment = `Hey team,
 
-@dexter please add unit tests for this feature
+@mapthew please add unit tests for this feature
 
 Thanks!`;
-    expect(extractDexterInstruction(comment)).toBe(
+    expect(extractBotInstruction(comment)).toBe(
       "please add unit tests for this feature",
     );
   });
 
-  it("returns null when no @dexter trigger", () => {
-    expect(extractDexterInstruction("just a regular comment")).toBe(null);
+  it("returns null when no @mapthew trigger", () => {
+    expect(extractBotInstruction("just a regular comment")).toBe(null);
   });
 
   it("returns null for empty string", () => {
-    expect(extractDexterInstruction("")).toBe(null);
+    expect(extractBotInstruction("")).toBe(null);
   });
 
-  it("handles @dexter at end of line", () => {
-    expect(extractDexterInstruction("@dexter")).toBe(null);
+  it("handles @mapthew at end of line", () => {
+    expect(extractBotInstruction("@mapthew")).toBe(null);
   });
 
-  it("handles @dexter with only whitespace after", () => {
-    expect(extractDexterInstruction("@dexter   ")).toBe("");
+  it("handles @mapthew with only whitespace after", () => {
+    expect(extractBotInstruction("@mapthew   ")).toBe("");
   });
 });
 
@@ -144,7 +144,7 @@ describe("isGitHubPRCommentEvent", () => {
       action: "created",
       comment: {
         id: 1,
-        body: "@dexter fix this",
+        body: "@mapthew fix this",
         user: { login: "testuser" },
       },
       issue: {
@@ -165,7 +165,7 @@ describe("isGitHubPRCommentEvent", () => {
       action: "created",
       comment: {
         id: 1,
-        body: "@dexter fix this",
+        body: "@mapthew fix this",
         user: { login: "testuser" },
       },
       issue: {
@@ -186,7 +186,7 @@ describe("isGitHubPRCommentEvent", () => {
       action: "edited",
       comment: {
         id: 1,
-        body: "@dexter fix this",
+        body: "@mapthew fix this",
         user: { login: "testuser" },
       },
       issue: {

@@ -1,5 +1,5 @@
 {
-  "name": "dexter",
+  "name": "mapthew",
   "private": true,
   "packageManager": "pnpm@9.15.0",
   "scripts": {
@@ -10,10 +10,10 @@
     "lint": "pnpm -r lint",
     "test": "pnpm -r --if-present test",
     "clean": "pnpm -r clean && rm -rf node_modules",
-    "shared": "pnpm --filter @dexter/shared",
-    "webhook": "pnpm --filter @dexter/webhook",
-    "worker": "pnpm --filter @dexter/worker",
-    "mcp": "pnpm --filter @dexter/integration-tests-mcp",
+    "shared": "pnpm --filter @mapthew/shared",
+    "webhook": "pnpm --filter @mapthew/webhook",
+    "worker": "pnpm --filter @mapthew/worker",
+    "mcp": "pnpm --filter @mapthew/integration-tests-mcp",
     "tunnel": "cloudflared tunnel --config cloudflare-tunnel-config.yml run"
   },
   "devDependencies": {

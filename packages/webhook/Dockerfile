@@ -31,8 +31,8 @@ RUN pnpm install --frozen-lockfile
 COPY packages/shared ./packages/shared
 COPY packages/webhook ./packages/webhook
 
-RUN pnpm --filter @dexter/shared build && \
-    pnpm --filter @dexter/webhook build
+RUN pnpm --filter @mapthew/shared build && \
+    pnpm --filter @mapthew/webhook build
 
 # ============================================
 # Production stage

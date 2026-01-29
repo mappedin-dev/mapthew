@@ -1,4 +1,4 @@
-import { isGitHubJob, isJiraJob, Job } from "@dexter/shared";
+import { isGitHubJob, isJiraJob, Job } from "@mapthew/shared";
 
 /**
  * Get a job identifier for logging

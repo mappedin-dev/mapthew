@@ -4,7 +4,7 @@ HTTP server receiving webhooks, enqueuing jobs to Redis.
 
 ## Patterns
 
-- Routes extract `@dexter` instructions and enqueue jobs — they don't process work
+- Routes extract `@mapthew` instructions and enqueue jobs — they don't process work
 - Always return 200 for ignored events to prevent webhook provider retries
 - Middleware handles signature verification when secrets are configured
 

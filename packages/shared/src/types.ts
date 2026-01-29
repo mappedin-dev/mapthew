@@ -1,3 +1,5 @@
+import { getTriggerPattern } from "./config.js";
+
 /**
  * Base job data common to all sources
  */
@@ -86,11 +88,11 @@ export function isCommentCreatedEvent(payload: WebhookPayload): boolean {
 }
 
 /**
- * Extract @dexter instruction from comment body
- * Returns null if no @dexter trigger found
+ * Extract bot instruction from comment body
+ * Returns null if no trigger found (e.g., @mapthew or configured bot name)
  */
-export function extractDexterInstruction(commentBody: string): string | null {
-  const match = commentBody.match(/@dexter\s+(.*)/i);
+export function extractBotInstruction(commentBody: string): string | null {
+  const match = commentBody.match(getTriggerPattern());
   return match ? match[1].trim() : null;
 }
 

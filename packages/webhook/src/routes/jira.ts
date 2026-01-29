@@ -3,9 +3,10 @@ import {
   type JiraJob,
   type WebhookPayload,
   isCommentCreatedEvent,
-  extractDexterInstruction,
+  extractBotInstruction,
   postJiraComment,
-} from "@dexter/shared";
+  getBotName,
+} from "@mapthew/shared";
 import { queue, jiraCredentials } from "../config.js";
 import { jiraWebhookAuth } from "../middleware/index.js";
 
@@ -32,11 +33,12 @@ router.post("/", jiraWebhookAuth, async (req, res) => {
         .json({ status: "ignored", reason: "not a comment_created event" });
     }
 
-    const instruction = extractDexterInstruction(payload.comment.body);
+    const instruction = extractBotInstruction(payload.comment.body);
     if (!instruction) {
-      return res
-        .status(200)
-        .json({ status: "ignored", reason: "no @dexter trigger found" });
+      return res.status(200).json({
+        status: "ignored",
+        reason: `no @${getBotName()} trigger found`,
+      });
     }
 
     const job: JiraJob = {

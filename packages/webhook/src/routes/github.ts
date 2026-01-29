@@ -3,9 +3,10 @@ import {
   type GitHubJob,
   type GitHubWebhookPayload,
   isGitHubPRCommentEvent,
-  extractDexterInstruction,
+  extractBotInstruction,
   postGitHubComment,
-} from "@dexter/shared";
+  getBotName,
+} from "@mapthew/shared";
 import { queue, GITHUB_TOKEN } from "../config.js";
 import { githubWebhookAuth } from "../middleware/index.js";
 
@@ -39,11 +40,12 @@ router.post("/", githubWebhookAuth, async (req, res) => {
         .json({ status: "ignored", reason: "not a new PR comment" });
     }
 
-    const instruction = extractDexterInstruction(payload.comment.body);
+    const instruction = extractBotInstruction(payload.comment.body);
     if (!instruction) {
-      return res
-        .status(200)
-        .json({ status: "ignored", reason: "no @dexter trigger found" });
+      return res.status(200).json({
+        status: "ignored",
+        reason: `no @${getBotName()} trigger found`,
+      });
     }
 
     const { login: owner } = payload.repository.owner;

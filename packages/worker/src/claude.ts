@@ -1,7 +1,7 @@
 import { spawn } from "child_process";
 import path from "path";
 import { fileURLToPath } from "url";
-import type { Job } from "@dexter/shared/types";
+import type { Job } from "@mapthew/shared";
 import { buildPrompt } from "./prompt.js";
 import { getReadableId } from "./utils.js";
 
@@ -16,7 +16,7 @@ const mcpConfigPath = path.join(__dirname, "..", "mcp-config.json");
  */
 export async function invokeClaudeCode(
   job: Job,
-  workDir: string,
+  workDir: string
 ): Promise<{ success: boolean; output: string; error?: string }> {
   const prompt = buildPrompt(job);
 

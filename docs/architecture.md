@@ -4,22 +4,22 @@
 
 ### Workflow
 
-Dexter can be triggered from two entry points:
+Mapthew can be triggered from two entry points:
 
-- **JIRA**: Comment `@dexter` on a ticket to create a new PR
-- **GitHub**: Comment `@dexter` on an existing PR to request updates
+- **JIRA**: Comment `@mapthew` on a ticket to create a new PR
+- **GitHub**: Comment `@mapthew` on an existing PR to request updates
 
 ```mermaid
 flowchart TD
-    subgraph JIRA["JIRA Cloud"]
-        A["Developer comments @dexter"]
+    subgraph JIRA["☁️ JIRA Cloud"]
+        A[👤 Developer comments<br/><code>@mapthew implement auth</code>]
+    end
+
+    subgraph GitHub["☁️ GitHub"]
+        G[👤 Developer comments on PR<br/><code>@mapthew add tests</code>]
     end
 
     B[Webhook Server]
-
-    subgraph GitHub["GitHub"]
-        G[Developer comments on PR<br/><code>@dexter add tests</code>]
-    end
 
     C[("BullMQ / Redis")]
     D[Workers]
@@ -45,12 +45,12 @@ flowchart TD
 sequenceDiagram
     actor Dev as Developer
     participant JIRA
-    participant System as Dexter
+    participant System as Mapthew
     participant GH as GitHub
 
     Note over Dev,GH: 1. Create PR from JIRA
 
-    Dev->>JIRA: Comment "@dexter implement this fix"
+    Dev->>JIRA: Comment "@mapthew implement this fix"
     JIRA->>System: Webhook: comment_created
     System->>System: Enqueue job
     System->>JIRA: Comment "🤓 Okie dokie!"
@@ -65,7 +65,7 @@ sequenceDiagram
 
     Note over Dev,GH: 2. Request changes via GitHub
 
-    Dev->>GH: Comment "@dexter add unit tests"
+    Dev->>GH: Comment "@mapthew add unit tests"
     GH->>System: Webhook: issue_comment
     System->>System: Extract issue key from branch
     System->>System: Enqueue job

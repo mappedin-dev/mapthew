@@ -1,19 +1,19 @@
-# 🤓 Dexter
+# 🤓 Mapthew
 
-Your AI-powered intern that turns JIRA tickets into pull requests. Mention `@dexter` in a JIRA comment with an instruction, and it will read the ticket, make code changes, and open a PR on GitHub.
+Your AI-powered intern that turns JIRA tickets into pull requests. Mention `@mapthew` in a JIRA comment with an instruction, and it will read the ticket, make code changes, and open a PR on GitHub.
 
 ## Usage
 
 ### JIRA
 
-Use Dexter to open PRs from an existing JIRA ticket.
+Use Mapthew to open PRs from an existing JIRA ticket.
 
 1. Navigate to any JIRA ticket
-2. Add a comment mentioning `@dexter` followed by your instruction:
+2. Add a comment mentioning `@mapthew` followed by your instruction:
    ```
-   @dexter implement this feature
+   @mapthew implement this feature
    ```
-3. Dexter will:
+3. Mapthew will:
    - Read the ticket details (summary, description, comments, attachments)
    - Find the relevant GitHub repository
    - Create a branch and implement the requested changes
@@ -21,14 +21,14 @@ Use Dexter to open PRs from an existing JIRA ticket.
 
 ### GitHub
 
-Use Dexter to update an open PR in GitHub.
+Use Mapthew to update an open PR in GitHub.
 
 1. Navigate to any PR.
-2. Add a comment mentioning `@dexter` followed by your instruction:
+2. Add a comment mentioning `@mapthew` followed by your instruction:
    ```
-   @dexter please add unit tests for this feature
+   @mapthew please add unit tests for this feature
    ```
-3. Dexter will:
+3. Mapthew will:
    - Read the original JIRA ticket for context
    - Review the PR and existing comments
    - Make the requested changes on the existing branch
@@ -38,15 +38,23 @@ Use Dexter to update an open PR in GitHub.
 ### Tips and Best Practices
 
 - Be specific in your instructions for better results
-- Include the repository URL in your comment if Dexter can't find it automatically
+- Include the repository URL in your comment if Mapthew can't find it automatically
   ```
-  @dexter implement this in https://github.com/org/repo
+  @mapthew implement this in https://github.com/org/repo
   ```
 
 ## Prerequisites
 
 - [Docker](https://www.docker.com/) and Docker Compose
 - [pnpm](https://pnpm.io/) (v9.15+)
+
+## Configuration
+
+| Variable     | Purpose                                           | Default   |
+| ------------ | ------------------------------------------------- | --------- |
+| **BOT_NAME** | Bot name used for triggers, branches, queue names | `mapthew` |
+
+Set `BOT_NAME` to customize the trigger (e.g., `@mybot` instead of `@mapthew`), branch prefix, and internal identifiers.
 
 ## Credentials
 
