@@ -165,7 +165,7 @@ export function createJiraClient(config: JiraClientConfig) {
       const result = await request<{
         transitions: Array<{ id: string; name: string }>;
       }>(`/rest/api/3/issue/${issueKey}/transitions`);
-      return result.transitions;
+      return result?.transitions ?? [];
     },
 
     /**
