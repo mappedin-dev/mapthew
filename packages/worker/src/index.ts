@@ -15,9 +15,24 @@ import {
   workspaceExists,
   cleanupWorkspace,
   getMaxSessions,
+  getS3Config,
+  isS3StorageEnabled,
+  archiveSessionToS3,
+  restoreSessionFromS3,
+  deleteSessionFromS3,
 } from "@dexter/shared";
 import { invokeClaudeCode } from "./claude.js";
 import { getReadableId, getIssueKey } from "./utils.js";
+
+// Log S3 storage status at startup
+const s3Config = getS3Config();
+if (s3Config) {
+  console.log(
+    `[S3] Session storage enabled: s3://${s3Config.bucket}/${s3Config.prefix || "sessions"}`,
+  );
+} else {
+  console.log("[S3] Session storage disabled (S3_SESSIONS_BUCKET not set)");
+}
 
 const REDIS_URL = process.env.REDIS_URL || "redis://localhost:6379";
 const JIRA_BASE_URL = process.env.JIRA_BASE_URL || "";
@@ -50,6 +65,60 @@ async function postComment(job: Job, comment: string): Promise<void> {
 }
 
 /**
+ * Try to restore a session from S3 if configured and no local session exists
+ */
+async function tryRestoreFromS3(workDir: string, issueKey: string): Promise<boolean> {
+  const config = getS3Config();
+  if (!config) {
+    return false;
+  }
+
+  try {
+    const restored = await restoreSessionFromS3(config, workDir, issueKey);
+    if (restored) {
+      console.log(`[S3] Successfully restored session for ${issueKey}`);
+    }
+    return restored;
+  } catch (error) {
+    console.warn(`[S3] Failed to restore session for ${issueKey}:`, error);
+    return false;
+  }
+}
+
+/**
+ * Archive a session to S3 if configured
+ */
+async function tryArchiveToS3(workDir: string, issueKey: string): Promise<void> {
+  const config = getS3Config();
+  if (!config) {
+    return;
+  }
+
+  try {
+    await archiveSessionToS3(config, workDir, issueKey);
+  } catch (error) {
+    // Log but don't fail the job - archiving is best-effort
+    console.warn(`[S3] Failed to archive session for ${issueKey}:`, error);
+  }
+}
+
+/**
+ * Delete a session from S3 if configured
+ */
+async function tryDeleteFromS3(issueKey: string): Promise<void> {
+  const config = getS3Config();
+  if (!config) {
+    return;
+  }
+
+  try {
+    await deleteSessionFromS3(config, issueKey);
+  } catch (error) {
+    console.warn(`[S3] Failed to delete session for ${issueKey}:`, error);
+  }
+}
+
+/**
  * Process a regular job using persistent workspaces for session reuse
  */
 async function processRegularJob(job: Job): Promise<void> {
@@ -76,7 +145,17 @@ async function processRegularJob(job: Job): Promise<void> {
   console.log(`[Session] Workspace: ${workDir}`);
 
   // Check if there's an existing Claude session to resume
-  const hasSession = await hasExistingSession(workDir);
+  let hasSession = await hasExistingSession(workDir);
+
+  // If no local session exists, try to restore from S3
+  if (!hasSession && isS3StorageEnabled()) {
+    console.log(`[S3] Checking for session in S3...`);
+    const restored = await tryRestoreFromS3(workDir, issueKey);
+    if (restored) {
+      hasSession = true;
+    }
+  }
+
   if (hasSession) {
     console.log(`[Session] Found existing session, will resume`);
   } else {
@@ -89,6 +168,9 @@ async function processRegularJob(job: Job): Promise<void> {
   if (!result.success) {
     throw new Error(result.error || "Claude Code CLI failed");
   }
+
+  // Archive session to S3 after successful completion
+  await tryArchiveToS3(workDir, issueKey);
 
   console.log(`Job completed for ${jobId}`);
   // Note: We intentionally do NOT clean up the workspace here
@@ -106,7 +188,13 @@ async function processJob(bullJob: BullJob<QueueJob>): Promise<void> {
     console.log(
       `[Session] Processing cleanup for ${job.issueKey} (reason: ${job.reason})`,
     );
+
+    // Clean up local workspace
     await cleanupWorkspace(job.issueKey);
+
+    // Also delete from S3 if configured
+    await tryDeleteFromS3(job.issueKey);
+
     return;
   }
 
