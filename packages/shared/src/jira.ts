@@ -1,5 +1,5 @@
 /**
- * JIRA API client utilities for polling and interacting with JIRA
+ * JIRA API client utilities
  */
 
 export interface JiraClientConfig {
@@ -195,19 +195,6 @@ export function createJiraClient(config: JiraClientConfig) {
 }
 
 export type JiraClient = ReturnType<typeof createJiraClient>;
-
-/**
- * Search for recently updated issues in a project
- */
-export async function searchRecentlyUpdatedIssues(
-  client: JiraClient,
-  project: string,
-  sinceMinutes: number,
-): Promise<JiraIssue[]> {
-  const jql = `project = ${project} AND updated >= -${sinceMinutes}m ORDER BY updated DESC`;
-  const result = await client.searchIssues(jql);
-  return result.issues;
-}
 
 /**
  * Extract plain text from JIRA's Atlassian Document Format (ADF)
