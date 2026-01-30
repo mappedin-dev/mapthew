@@ -3,10 +3,10 @@ import {
   listSessions,
   getSessionCount,
   getMaxSessions,
-  cleanupWorkspace,
   getWorkspacesDir,
   type SessionCleanupJob,
-} from "@dexter/shared";
+  type SessionInfo,
+} from "@mapthew/shared";
 import { queue } from "../config.js";
 
 const router: Router = Router();
@@ -27,7 +27,7 @@ router.get("/", async (_req, res) => {
       max,
       available: max - count,
       workspacesDir: getWorkspacesDir(),
-      sessions: sessions.map((s) => ({
+      sessions: sessions.map((s: SessionInfo) => ({
         issueKey: s.issueKey,
         workspacePath: s.workspacePath,
         createdAt: s.createdAt.toISOString(),
@@ -52,8 +52,8 @@ router.get("/stats", async (_req, res) => {
     const count = await getSessionCount();
     const max = getMaxSessions();
 
-    const activeSessions = sessions.filter((s) => s.hasSession);
-    const totalSize = activeSessions.reduce((sum, s) => sum + s.sizeBytes, 0);
+    const activeSessions = sessions.filter((s: SessionInfo) => s.hasSession);
+    const totalSize = activeSessions.reduce((sum: number, s: SessionInfo) => sum + s.sizeBytes, 0);
 
     res.json({
       total: sessions.length,

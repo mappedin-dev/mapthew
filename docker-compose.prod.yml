@@ -30,7 +30,7 @@ services:
       dockerfile: packages/worker/Dockerfile
       target: prod
     volumes:
-      - dexter-workspaces:/tmp/dexter-workspaces  # Persist session workspaces
+      - mapthew-workspaces:/tmp/mapthew-workspaces  # Persist session workspaces
     environment:
       - REDIS_URL=redis://redis:6379
       - JIRA_BASE_URL
@@ -44,4 +44,4 @@ services:
       - redis
 
 volumes:
-  dexter-workspaces:  # Named volume for session persistence
+  mapthew-workspaces:  # Named volume for session persistence

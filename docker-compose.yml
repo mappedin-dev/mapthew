@@ -4,6 +4,7 @@ networks:
 
 volumes:
   dashboard-dist:
+  mapthew-workspaces:  # Named volume for session persistence
 
 services:
   redis:
@@ -65,7 +66,7 @@ services:
       - ./packages/shared/src:/app/packages/shared/src
       - ./packages/worker/src:/app/packages/worker/src
       - ./packages/worker/instructions:/app/packages/worker/instructions
-      - dexter-workspaces:/tmp/dexter-workspaces  # Persist session workspaces
+      - mapthew-workspaces:/tmp/mapthew-workspaces  # Persist session workspaces
     environment:
       - REDIS_URL=redis://redis:6379
       - JIRA_BASE_URL
@@ -77,6 +78,3 @@ services:
     env_file: .env
     depends_on:
       - redis
-
-volumes:
-  dexter-workspaces:  # Named volume for session persistence
