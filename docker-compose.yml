@@ -53,6 +53,9 @@ services:
       - JIRA_BASE_URL
       - JIRA_EMAIL
       - JIRA_API_TOKEN
+      - JIRA_LABEL_ADD
+      - JIRA_LABEL_REMOVE
+      - JIRA_DONE_STATUS
       - GITHUB_TOKEN
       - ANTHROPIC_API_KEY
       - CLAUDE_MODEL

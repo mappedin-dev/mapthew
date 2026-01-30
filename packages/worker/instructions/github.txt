@@ -26,7 +26,10 @@ Your task:
 
 5. Verify your changes don't introduce regressions:
    - If you modified dependencies (package.json, requirements.txt, etc.), ensure install and build still work
-   - Run the linter/formatter if available (e.g., `pnpm lint`, `pnpm fmt`, `npm run prettier`, etc.) and fix any issues
+   - Run the linter/formatter if available and fix ALL issues before committing:
+     - Check package.json scripts for: `lint`, `fmt`, `format`, `prettier`, `eslint`
+     - Common commands: `pnpm lint`, `pnpm fmt`, `npm run prettier`, `npm run lint:fix`
+     - Do NOT commit code with linter errors or warnings
    - Run relevant tests only - don't run the entire test suite if you only changed one module
      - Look for test files related to the files you changed (e.g., `foo.test.ts` for `foo.ts`)
      - Use test filtering if available (e.g., `pnpm test -- --filter=module-name`)
