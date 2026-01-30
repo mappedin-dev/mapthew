@@ -8,7 +8,7 @@ import type { JiraCredentials, CommentResult } from "./types.js";
 export function verifyHmacSignature(
   secret: string,
   payload: string,
-  signature: string
+  signature: string,
 ): boolean {
   if (!signature) return false;
 
@@ -22,7 +22,7 @@ export function verifyHmacSignature(
   try {
     return timingSafeEqual(
       Buffer.from(sig, "hex"),
-      Buffer.from(expectedSignature, "hex")
+      Buffer.from(expectedSignature, "hex"),
     );
   } catch {
     return false;
@@ -35,7 +35,7 @@ export function verifyHmacSignature(
 export async function postJiraComment(
   credentials: JiraCredentials,
   issueKey: string,
-  comment: string
+  comment: string,
 ): Promise<CommentResult> {
   if (!credentials.baseUrl || !credentials.email || !credentials.apiToken) {
     console.warn("JIRA credentials not configured - skipping comment");
@@ -43,7 +43,7 @@ export async function postJiraComment(
   }
 
   const auth = Buffer.from(
-    `${credentials.email}:${credentials.apiToken}`
+    `${credentials.email}:${credentials.apiToken}`,
   ).toString("base64");
 
   try {
@@ -67,7 +67,7 @@ export async function postJiraComment(
             ],
           },
         }),
-      }
+      },
     );
 
     if (!response.ok) {
