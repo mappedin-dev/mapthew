@@ -1,6 +1,6 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { createHmac } from "crypto";
-import { verifyHmacSignature } from "./api.js";
+import { verifyHmacSignature, fetchGitHubPRDetails } from "./api.js";
 
 describe("verifyHmacSignature", () => {
   const secret = "test-secret";
@@ -88,5 +88,73 @@ describe("verifyHmacSignature", () => {
     const largePayload = JSON.stringify({ data: "x".repeat(10000) });
     const signature = generateSignature(secret, largePayload);
     expect(verifyHmacSignature(secret, largePayload, signature)).toBe(true);
+  });
+});
+
+describe("fetchGitHubPRDetails", () => {
+  const originalFetch = global.fetch;
+
+  beforeEach(() => {
+    vi.stubGlobal("fetch", vi.fn());
+  });
+
+  afterEach(() => {
+    vi.stubGlobal("fetch", originalFetch);
+  });
+
+  it("returns PR details on success", async () => {
+    const mockResponse = {
+      number: 42,
+      title: "Add new feature",
+      head: { ref: "feature/DXTR-123-new-feature" },
+      base: { ref: "main" },
+    };
+
+    vi.mocked(fetch).mockResolvedValueOnce({
+      ok: true,
+      json: async () => mockResponse,
+    } as Response);
+
+    const result = await fetchGitHubPRDetails("token", "owner", "repo", 42);
+
+    expect(result).toEqual({
+      number: 42,
+      title: "Add new feature",
+      branchName: "feature/DXTR-123-new-feature",
+      baseBranch: "main",
+    });
+
+    expect(fetch).toHaveBeenCalledWith(
+      "https://api.github.com/repos/owner/repo/pulls/42",
+      expect.objectContaining({
+        method: "GET",
+        headers: expect.objectContaining({
+          Authorization: "Bearer token",
+        }),
+      }),
+    );
+  });
+
+  it("returns null when token is not provided", async () => {
+    const result = await fetchGitHubPRDetails("", "owner", "repo", 42);
+    expect(result).toBeNull();
+    expect(fetch).not.toHaveBeenCalled();
+  });
+
+  it("returns null on API error", async () => {
+    vi.mocked(fetch).mockResolvedValueOnce({
+      ok: false,
+      text: async () => "Not found",
+    } as Response);
+
+    const result = await fetchGitHubPRDetails("token", "owner", "repo", 999);
+    expect(result).toBeNull();
+  });
+
+  it("returns null on network error", async () => {
+    vi.mocked(fetch).mockRejectedValueOnce(new Error("Network error"));
+
+    const result = await fetchGitHubPRDetails("token", "owner", "repo", 42);
+    expect(result).toBeNull();
   });
 });
