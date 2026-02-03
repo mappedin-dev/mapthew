@@ -20,6 +20,7 @@ flowchart TD
     end
 
     B[Webhook Server]
+    ADMIN[Admin Dashboard]
 
     C[("BullMQ / Redis")]
     D[Workers]
@@ -37,6 +38,9 @@ flowchart TD
     D -->|MCP| J
     D -->|MCP| H
     D -->|generate code| I
+
+    ADMIN -->|/api/*| B
+    B -->|read/write| C
 ```
 
 ### End-to-End Example
@@ -196,15 +200,33 @@ sequenceDiagram
 
 ## Admin Dashboard
 
-The webhook server exposes a [Bull Board](https://github.com/felixmosh/bull-board) dashboard at `/admin` for monitoring the job queue.
+The webhook server serves a custom React dashboard at `/admin` for monitoring and configuration.
 
 **URL:** `http://localhost:3000/admin`
 
-**Features:**
+```mermaid
+flowchart LR
+    subgraph Dashboard["Admin Dashboard"]
+        UI["React SPA"]
+    end
 
-- View jobs by status (waiting, active, completed, failed, delayed)
-- Inspect job data and error messages
-- Retry or remove failed jobs
-- Queue statistics
+    subgraph Server["Webhook Server"]
+        STATIC["/admin — Static Files"]
+        API_Q["/api/queues — Queue Status"]
+        API_C["/api/config — Configuration"]
+    end
+
+    subgraph Storage
+        REDIS[("Redis")]
+    end
+
+    UI -->|fetch| API_Q
+    UI -->|fetch| API_C
+    API_Q -->|read jobs| REDIS
+    API_C -->|read/write| REDIS
+    STATIC -->|serves| UI
+```
+
+See [`packages/dashboard/AGENTS.md`](../packages/dashboard/AGENTS.md) for detailed specs.
 
 ---

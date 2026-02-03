@@ -1,30 +1,39 @@
+import path from "path";
+import { fileURLToPath } from "url";
 import express, { type Request, type Response } from "express";
-import { createBullBoard } from "@bull-board/api";
-import { BullMQAdapter } from "@bull-board/api/bullMQAdapter";
-import { ExpressAdapter } from "@bull-board/express";
 import {
   PORT,
+  REDIS_URL,
   queue,
   JIRA_WEBHOOK_SECRET,
   GITHUB_WEBHOOK_SECRET,
 } from "./config.js";
-import { getBotName } from "@mapthew/shared";
+import { getBotName, initConfigStore, getConfig } from "@mapthew/shared";
 import type { RequestWithRawBody } from "./middleware/index.js";
 import jiraRoutes from "./routes/jira.js";
 import githubRoutes from "./routes/github.js";
+import apiRoutes from "./routes/api.js";
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 const app = express();
 
-// Setup Bull Board dashboard
-const serverAdapter = new ExpressAdapter();
-serverAdapter.setBasePath("/admin");
+// Initialize config store with Redis
+initConfigStore(REDIS_URL);
 
-createBullBoard({
-  queues: [new BullMQAdapter(queue)],
-  serverAdapter,
+// Load config from Redis on startup
+getConfig().then((config) => {
+  console.log(`  Loaded config: botName=${config.botName}`);
 });
 
-app.use("/admin", serverAdapter.getRouter());
+// Serve dashboard static files
+const dashboardPath = path.join(__dirname, "../../dashboard/dist");
+app.use("/admin", express.static(dashboardPath));
+
+// SPA fallback for hash routing (optional, but good for direct /admin access)
+app.get("/admin/*", (_req, res) => {
+  res.sendFile(path.join(dashboardPath, "index.html"));
+});
 
 // Parse JSON bodies and capture raw body for signature verification
 app.use(
@@ -36,6 +45,7 @@ app.use(
 );
 
 // Routes
+app.use("/api", apiRoutes);
 app.use("/webhook/jira", jiraRoutes);
 app.use("/webhook/github", githubRoutes);
 

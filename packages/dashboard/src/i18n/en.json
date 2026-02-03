@@ -1,0 +1,71 @@
+{
+  "common": {
+    "appName": "Mapthew",
+    "admin": "Admin",
+    "loading": "Loading...",
+    "error": "Error",
+    "retry": "Retry",
+    "remove": "Remove",
+    "save": "Save",
+    "saving": "Saving...",
+    "saved": "Saved"
+  },
+  "nav": {
+    "home": "Home",
+    "jobs": "Jobs",
+    "settings": "Settings"
+  },
+  "home": {
+    "welcome": "Hi, I'm {{name}}!",
+    "description": "I'm your AI intern. Come see what I'm working on.",
+    "viewJobs": "View Jobs",
+    "viewJobsDescription": "Monitor and manage queue",
+    "settings": "Settings",
+    "settingsDescription": "Update configurations"
+  },
+  "jobs": {
+    "title": "Jobs",
+    "description": "Manage and monitor job execution",
+    "noJobs": "No jobs found",
+    "errorLoading": "Error loading jobs: {{message}}",
+    "status": {
+      "all": "All",
+      "waiting": "Waiting",
+      "active": "Active",
+      "completed": "Completed",
+      "failed": "Failed",
+      "delayed": "Delayed"
+    },
+    "table": {
+      "id": "ID",
+      "status": "Status",
+      "source": "Source",
+      "created": "Created",
+      "actions": "Actions"
+    }
+  },
+  "job": {
+    "backToJobs": "Back to Jobs",
+    "retryJob": "Retry Job",
+    "removeJob": "Remove Job",
+    "notFound": "Job not found",
+    "errorLoading": "Error loading job: {{message}}",
+    "created": "Created",
+    "processed": "Processed",
+    "finished": "Finished",
+    "error": "Error",
+    "jobData": "Job Data",
+    "returnValue": "Return Value"
+  },
+  "settings": {
+    "title": "Settings",
+    "description": "Update configuration options",
+    "errorLoading": "Error loading config: {{message}}",
+    "botName": {
+      "label": "Bot Name",
+      "placeholder": "mapthew",
+      "helpFormat": "Lowercase a-z, 0-9, dashes, and underscores only.",
+      "helpMention": "Mention the bot with <name>@{{botName}}</name>."
+    }
+  }
+}

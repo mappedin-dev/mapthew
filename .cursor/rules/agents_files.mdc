@@ -1,0 +1,6 @@
+---
+globs: */**/AGENTS.md
+alwaysApply: false
+---
+
+Do not be overly specific when updating AGENTS.md files. Too much information easily goes stale and bloats context. For example, do not list every API route of a server, just summarize the format that routes follow and the rationale so that new routes can be added consistently.

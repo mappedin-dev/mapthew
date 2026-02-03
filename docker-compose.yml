@@ -2,6 +2,9 @@ networks:
   mapthew:
     name: mapthew-network
 
+volumes:
+  dashboard-dist:
+
 services:
   redis:
     container_name: redis
@@ -10,6 +13,17 @@ services:
       - mapthew
     ports:
       - "${REDIS_PORT:-6379}:6379"
+
+  dashboard:
+    container_name: dashboard
+    build:
+      context: .
+      dockerfile: packages/dashboard/Dockerfile
+      target: dev
+    volumes:
+      - ./packages/dashboard/src:/app/packages/dashboard/src
+      - ./packages/dashboard/index.html:/app/packages/dashboard/index.html
+      - dashboard-dist:/app/packages/dashboard/dist
 
   webhook:
     container_name: webhook
@@ -24,6 +38,7 @@ services:
     volumes:
       - ./packages/shared/src:/app/packages/shared/src
       - ./packages/webhook/src:/app/packages/webhook/src
+      - dashboard-dist:/app/packages/dashboard/dist:ro
     environment:
       - PORT=${WEBHOOK_PORT:-3000}
       - REDIS_URL=redis://redis:6379
@@ -35,6 +50,7 @@ services:
     env_file: .env
     depends_on:
       - redis
+      - dashboard
 
   worker:
     container_name: worker-1

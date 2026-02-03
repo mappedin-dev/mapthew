@@ -11,8 +11,6 @@
     "clean": "rm -rf dist"
   },
   "dependencies": {
-    "@bull-board/api": "^6.0.0",
-    "@bull-board/express": "^6.0.0",
     "@mapthew/shared": "workspace:*",
     "express": "^4.21.0"
   },

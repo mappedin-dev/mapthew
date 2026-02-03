@@ -13,6 +13,7 @@
     "shared": "pnpm --filter @mapthew/shared",
     "webhook": "pnpm --filter @mapthew/webhook",
     "worker": "pnpm --filter @mapthew/worker",
+    "dashboard": "pnpm --filter @mapthew/dashboard",
     "mcp": "pnpm --filter @mapthew/integration-tests-mcp",
     "tunnel": "cloudflared tunnel --config cloudflare-tunnel-config.yml run"
   },

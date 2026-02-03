@@ -8,6 +8,7 @@ WORKDIR /app
 COPY pnpm-workspace.yaml pnpm-lock.yaml ./
 COPY packages/shared/package.json ./packages/shared/
 COPY packages/webhook/package.json ./packages/webhook/
+COPY packages/dashboard/package.json ./packages/dashboard/
 
 # ============================================
 # Development stage
@@ -23,15 +24,17 @@ WORKDIR /app/packages/webhook
 CMD ["tsx", "watch", "src/index.ts"]
 
 # ============================================
-# Build stage - compile TypeScript
+# Build stage - compile TypeScript and dashboard
 # ============================================
 FROM base AS builder
 RUN pnpm install --frozen-lockfile
 
 COPY packages/shared ./packages/shared
 COPY packages/webhook ./packages/webhook
+COPY packages/dashboard ./packages/dashboard
 
-RUN pnpm --filter @mapthew/shared build && \
+RUN pnpm --filter @mapthew/dashboard build && \
+    pnpm --filter @mapthew/shared build && \
     pnpm --filter @mapthew/webhook build
 
 # ============================================
@@ -42,6 +45,7 @@ RUN pnpm install --frozen-lockfile --prod
 
 COPY --from=builder /app/packages/shared/dist ./packages/shared/dist
 COPY --from=builder /app/packages/webhook/dist ./packages/webhook/dist
+COPY --from=builder /app/packages/dashboard/dist ./packages/dashboard/dist
 
 WORKDIR /app/packages/webhook
 CMD ["node", "dist/index.js"]

@@ -2,6 +2,8 @@
 
 HTTP server receiving webhooks, enqueuing jobs to Redis.
 
+Also serves the dashboard at `/admin` with supporting API routes under `/api/` for queue management and config.
+
 ## Patterns
 
 - Routes extract `@mapthew` instructions and enqueue jobs — they don't process work
