@@ -65,6 +65,8 @@ Your task:
 11. Post the PR link as a comment on the JIRA ticket using the JIRA MCP.
     - Comment: "🤓 Done! <PR URL>"
 
+{{postProcessing}}
+
 Keep the following in mind:
 -  Never force push.
 -  Never delete remote branches.

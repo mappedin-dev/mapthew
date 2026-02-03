@@ -1,6 +1,5 @@
 import {
   createWorker,
-  createJiraClient,
   type BullJob,
   isGitHubJob,
   isJiraJob,
@@ -28,21 +27,6 @@ const jiraCredentials = {
   apiToken: JIRA_API_TOKEN,
 };
 
-// Post-processing configuration
-const JIRA_LABEL_ADD = process.env.JIRA_LABEL_ADD || "claude-processed";
-const JIRA_LABEL_REMOVE = process.env.JIRA_LABEL_REMOVE || "claude-ready";
-const JIRA_DONE_STATUS = process.env.JIRA_DONE_STATUS || "";
-
-// Initialize JIRA client for post-processing
-const jiraClient =
-  JIRA_BASE_URL && JIRA_EMAIL && JIRA_API_TOKEN
-    ? createJiraClient({
-        baseUrl: JIRA_BASE_URL,
-        email: JIRA_EMAIL,
-        apiToken: JIRA_API_TOKEN,
-      })
-    : null;
-
 /**
  * Post a comment to the appropriate source (JIRA or GitHub)
  */
@@ -57,47 +41,6 @@ async function postComment(job: Job, comment: string): Promise<void> {
     );
   } else if (isJiraJob(job)) {
     await postJiraComment(jiraCredentials, job.issueKey, comment);
-  }
-}
-
-/**
- * Post-process a JIRA issue after successful job completion
- * - Add label (default: claude-processed)
- * - Remove label (default: claude-ready)
- * - Transition to status (if configured)
- */
-async function postProcessJiraIssue(issueKey: string): Promise<void> {
-  if (!jiraClient) return;
-
-  // Update labels (independent of transition)
-  const labelsToAdd = JIRA_LABEL_ADD ? [JIRA_LABEL_ADD.trim()] : [];
-  const labelsToRemove = JIRA_LABEL_REMOVE ? [JIRA_LABEL_REMOVE.trim()] : [];
-
-  if (labelsToAdd.length > 0 || labelsToRemove.length > 0) {
-    try {
-      await jiraClient.updateLabels(issueKey, {
-        add: labelsToAdd,
-        remove: labelsToRemove,
-      });
-      console.log(
-        `Updated labels for ${issueKey}: +${labelsToAdd.join(",")} -${labelsToRemove.join(",")}`,
-      );
-    } catch (error) {
-      console.error(`Failed to update labels for ${issueKey}:`, error);
-    }
-  }
-
-  // Transition to configured status (independent of labels)
-  const doneStatus = JIRA_DONE_STATUS?.trim();
-  if (doneStatus) {
-    try {
-      const success = await jiraClient.transitionTo(issueKey, doneStatus);
-      if (success) {
-        console.log(`Transitioned ${issueKey} to "${doneStatus}"`);
-      }
-    } catch (error) {
-      console.error(`Failed to transition ${issueKey}:`, error);
-    }
   }
 }
 
@@ -145,11 +88,6 @@ async function processJob(bullJob: BullJob<Job>): Promise<void> {
     }
 
     console.log(`Job completed for ${jobId}`);
-
-    // Post-process JIRA issues: update labels and transition status
-    if (isJiraJob(job)) {
-      await postProcessJiraIssue(job.issueKey);
-    }
   } finally {
     await cleanupWorkspace(workDir);
     console.log(`Cleaned up workspace: ${workDir}`);
