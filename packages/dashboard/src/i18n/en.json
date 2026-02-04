@@ -10,6 +10,21 @@
     "saving": "Saving...",
     "saved": "Saved"
   },
+  "auth": {
+    "login": {
+      "title": "Mapthew Admin",
+      "description": "Sign in to access the dashboard",
+      "google": "Sign in with Google"
+    },
+    "denied": {
+      "title": "Access Denied",
+      "description": "You don't have permission to access this dashboard.",
+      "signedInAs": "Signed in as {{email}}",
+      "logout": "Sign out"
+    },
+    "logout": "Sign out",
+    "signOut": "Sign out"
+  },
   "nav": {
     "home": "Home",
     "jobs": "Jobs",
@@ -18,14 +33,13 @@
   "home": {
     "welcome": "Hi, I'm {{name}}!",
     "description": "I'm your AI intern. Come see what I'm working on.",
-    "viewJobs": "View Jobs",
-    "viewJobsDescription": "Monitor and manage queue",
+    "viewJobs": "Jobs",
+    "viewJobsDescription": "Monitor past and current jobs",
     "settings": "Settings",
     "settingsDescription": "Update configurations"
   },
   "jobs": {
     "title": "Jobs",
-    "description": "Manage and monitor job execution",
     "noJobs": "No jobs found",
     "errorLoading": "Error loading jobs: {{message}}",
     "status": {
@@ -65,13 +79,12 @@
   },
   "settings": {
     "title": "Settings",
-    "description": "Update configuration options",
     "errorLoading": "Error loading config: {{message}}",
     "botName": {
       "label": "Bot Name",
-      "description": "Mention the bot with <name>@{{botName}}</name>",
+      "description": "How the bot should be tagged, e.g. <name>@{{botName}}</name>",
       "placeholder": "mapthew",
-      "tip": "Lowercase letters (a-z), numbers (0-9), dashes (-), and underscores (_)."
+      "tip": "Lowercase letters (a-z), numbers (0-9), dashes (-), and underscores (_)"
     },
     "claudeModel": {
       "label": "Model",

@@ -31,57 +31,75 @@ function buildJiraPostProcessing(): string {
   // Always include transition instruction - Claude figures out the right status
   steps.push(`- Transition to an appropriate status (e.g., "Code Review", "In Review", "Ready for Review") based on available transitions`);
 
-  return `12. Update the JIRA ticket using the JIRA MCP:\n    ${steps.join("\n    ")}`;
+  return steps.join("\n");
 }
 
-// Load instructions templates at startup
-const jiraInstructionsPath = path.join(
-  __dirname,
-  "..",
-  "instructions",
-  "jira.txt"
-);
-const jiraInstructionsTemplate = fs.readFileSync(jiraInstructionsPath, "utf-8");
+// Load all instruction markdown files at startup
+const instructionsDir = path.join(__dirname, "..", "instructions");
 
-const githubInstructionsPath = path.join(
-  __dirname,
-  "..",
-  "instructions",
-  "github.txt"
-);
-const githubInstructionsTemplate = fs.readFileSync(
-  githubInstructionsPath,
-  "utf-8"
-);
+function loadInstructions(): string[] {
+  const files = fs.readdirSync(instructionsDir);
+  const mdFiles = files.filter((f) => f.endsWith(".md"));
+
+  // Ensure general.md is always first, then sort the rest alphabetically
+  const sorted = mdFiles.sort((a, b) => {
+    if (a === "general.md") return -1;
+    if (b === "general.md") return 1;
+    return a.localeCompare(b);
+  });
+
+  return sorted.map((file) =>
+    fs.readFileSync(path.join(instructionsDir, file), "utf-8")
+  );
+}
+
+const instructionTemplates = loadInstructions();
 
 /**
  * Build the prompt for Claude Code CLI
+ *
+ * All instruction files are loaded and concatenated. Job-specific
+ * context is injected via template placeholders. Missing values
+ * are replaced with "unknown".
  */
 export function buildPrompt(job: Job): string {
-  if (isGitHubJob(job)) {
-    return githubInstructionsTemplate
-      .replace(/\{\{botName\}\}/g, getBotName())
-      .replace(/\{\{branchPrefix\}\}/g, getBranchPrefix())
-      .replace(/\{\{triggeredBy\}\}/g, job.triggeredBy)
-      .replace(/\{\{instruction\}\}/g, job.instruction)
-      .replace(/\{\{owner\}\}/g, job.owner)
-      .replace(/\{\{repo\}\}/g, job.repo)
-      .replace(/\{\{prNumber\}\}/g, String(job.prNumber))
-      .replace(/\{\{timestamp\}\}/g, String(Date.now()))
-      .trim();
-  }
+  // Build job context for template replacement
+  const context: Record<string, string> = {
+    triggeredBy: job.triggeredBy,
+    instruction: job.instruction,
+    botName: getBotName(),
+    branchPrefix: getBranchPrefix(),
+    // GitHub context (defaults to "unknown")
+    "github.owner": isGitHubJob(job) ? job.owner : "unknown",
+    "github.repo": isGitHubJob(job) ? job.repo : "unknown",
+    "github.prNumber":
+      isGitHubJob(job) && job.prNumber ? String(job.prNumber) : "unknown",
+    // Jira context (defaults to "unknown")
+    "jira.issueKey": isJiraJob(job) ? job.issueKey : "unknown",
+  };
 
+  // Add JIRA post-processing config to context
   if (isJiraJob(job)) {
-    return jiraInstructionsTemplate
-      .replace(/\{\{botName\}\}/g, getBotName())
-      .replace(/\{\{branchPrefix\}\}/g, getBranchPrefix())
-      .replace(/\{\{issueKey\}\}/g, job.issueKey)
-      .replace(/\{\{triggeredBy\}\}/g, job.triggeredBy)
-      .replace(/\{\{instruction\}\}/g, job.instruction)
-      .replace(/\{\{postProcessing\}\}/g, buildJiraPostProcessing())
-      .replace(/\{\{timestamp\}\}/g, String(Date.now()))
-      .trim();
+    context["jira.postProcessing"] = buildJiraPostProcessing();
   }
 
-  return "";
+  // Process all instruction templates
+  const prompt = instructionTemplates
+    .map((template) => replaceVariables(template, context))
+    .join("\n\n---\n\n");
+
+  return prompt.trim();
+}
+
+/**
+ * Replace variable placeholders with values from context
+ */
+function replaceVariables(
+  template: string,
+  context: Record<string, string>
+): string {
+  return template.replace(/\{\{([^}]+)\}\}/g, (match, key) => {
+    const value = context[key.trim()];
+    return value !== undefined ? value : "unknown";
+  });
 }

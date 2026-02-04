@@ -92,10 +92,12 @@ export default function Jobs() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold text-white mb-2">{t("jobs.title")}</h1>
-        <p className="text-dark-400">{t("jobs.description")}</p>
-      </div>
+      <h1 className="text-3xl font-bold text-white flex items-center gap-3">
+        <svg className="w-7 h-7 text-accent" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+        </svg>
+        {t("jobs.title")}
+      </h1>
 
       <div className="flex gap-2 flex-wrap">
         {STATUS_OPTIONS.map((s) => (

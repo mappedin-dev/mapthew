@@ -32,10 +32,26 @@ export interface Config {
   availableModels: string[];
 }
 
+// Token getter function, set by ApiTokenProvider
+let getAccessToken: (() => Promise<string>) | null = null;
+
+export function setTokenGetter(getter: () => Promise<string>) {
+  getAccessToken = getter;
+}
+
 async function fetchJSON<T>(url: string, options?: RequestInit): Promise<T> {
+  if (!getAccessToken) {
+    throw new Error("API client not initialized - missing token getter");
+  }
+
+  const token = await getAccessToken();
   const res = await fetch(`${API_BASE}${url}`, {
-    headers: { "Content-Type": "application/json" },
     ...options,
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+      ...options?.headers,
+    },
   });
   if (!res.ok) {
     throw new Error(`API error: ${res.status} ${res.statusText}`);

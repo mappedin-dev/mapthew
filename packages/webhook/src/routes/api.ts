@@ -163,11 +163,9 @@ router.put("/config", async (req, res) => {
 
     if (claudeModel !== undefined) {
       if (!CLAUDE_MODELS.includes(claudeModel)) {
-        res
-          .status(400)
-          .json({
-            error: `Invalid model. Must be one of: ${CLAUDE_MODELS.join(", ")}`,
-          });
+        res.status(400).json({
+          error: `Invalid model. Must be one of: ${CLAUDE_MODELS.join(", ")}`,
+        });
         return;
       }
       config.claudeModel = claudeModel;

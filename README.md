@@ -58,13 +58,16 @@ Set `BOT_NAME` to customize the trigger (e.g., `@mybot` instead of `@mapthew`), 
 
 ## Credentials
 
-| Credential                | Purpose                                     |
-| ------------------------- | ------------------------------------------- |
-| **JIRA API Token**        | Reading tickets and posting comments        |
-| **JIRA Webhook Secret**   | Verify webhook signatures (optional)        |
-| **GitHub PAT**            | `repo` and `workflow` scopes                |
-| **GitHub Webhook Secret** | Verify GitHub webhook signatures (optional) |
-| **Anthropic API Key**     | Claude Code CLI                             |
+| Credential                | Purpose                              |
+| ------------------------- | ------------------------------------ |
+| **JIRA API Token**        | Reading tickets and posting comments |
+| **JIRA Webhook Secret**   | Verify webhook signatures            |
+| **GitHub PAT**            | `repo` and `workflow` scopes         |
+| **GitHub Webhook Secret** | Verify GitHub webhook signatures     |
+| **Anthropic API Key**     | Claude Code CLI                      |
+| **Auth0 Domain**          | Auth0 tenant for dashboard auth      |
+| **Auth0 Client ID**       | Dashboard SPA client ID              |
+| **Auth0 Audience**        | API identifier for JWT validation    |
 
 ## Setup
 
@@ -88,23 +91,59 @@ Set `BOT_NAME` to customize the trigger (e.g., `@mybot` instead of `@mapthew`), 
 
    This runs Redis, the webhook server, and the worker via Docker Compose.
 
-4. Expose the webhook server (defaults to `:3000`) to the internet and configure your webhooks:
+   To do a full rebuild (clears volumes and rebuilds images without cache):
+
+   ```bash
+   pnpm dev:rebuild
+   ```
+
+   Use `dev:rebuild` when you change:
+
+   - Dependencies in `package.json`
+   - Dockerfiles
+
+4. Start a [cloudflare tunnel](#cloudflare-tunnel).
+
+5. Configure production services to point to your tunnel:
    - **JIRA**: Point to `/webhook/jira` for ticket comment triggers
    - **GitHub**: Point to `/webhook/github` for PR comment triggers (configure for `issue_comment` events)
 
 ## Local Testing
 
-###
-
 Use the `requests.http` file to trigger workflows without relying on the JIRA webhook:
 
 1. Make sure the services are running
-2. Open `requests.http` in VS Code with the [REST Client](https://marketplace.visualstudio.com/items?itemName=humao.rest-client) extension
-3. Click "Send Request" above any request to trigger it
+2. Generate the webhook signature:
+   ```bash
+   pnpm requests:init
+   ```
+3. Open `requests.http` in VS Code with the [REST Client](https://marketplace.visualstudio.com/items?itemName=humao.rest-client) extension
+4. Click "Send Request" above any request to trigger it
 
-## Integration Tests
+## Cloudflare Tunnel
 
-To run `pnpm mcp test` locally, install the JIRA MCP server:
+Use a Cloudflare tunnel to expose your local webhook server for testing with real JIRA/GitHub webhooks.
+
+1. Get set up with a cloudflare tunnel and obtain credentials from your manager.
+
+2. Copy the example config files and fill in your tunnel credentials:
+
+```bash
+cp cloudflare-tunnel.json.example cloudflare-tunnel.json
+cp cloudflare-tunnel-config.yml.example cloudflare-tunnel-config.yml
+```
+
+3. Run the tunnel:
+
+```bash
+pnpm tunnel
+```
+
+The webhook server will be accessible at the tunnel hostname.
+
+## MCP Integration Tests
+
+To test the MCP servers locally, install the JIRA MCP server:
 
 ```bash
 pipx install mcp-atlassian

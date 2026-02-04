@@ -6,6 +6,21 @@ Dashboard for queue monitoring and configuration. Served by the webhook server a
 
 Vite, React 19, React Router (HashRouter), TanStack Query, Tailwind CSS
 
+## Authentication
+
+Auth0 with Google OAuth. Requires `admin:access` permission.
+
+```mermaid
+flowchart TD
+    User([User]) --> Login[Login Page]
+    Login -->|"Google OAuth"| Auth0[Auth0]
+    Auth0 -->|"JWT with permissions"| AuthGuard[AuthGuard]
+    AuthGuard -->|"has admin:access"| Dashboard[Dashboard Routes]
+    AuthGuard -->|"no permission"| AccessDenied[Access Denied]
+    Dashboard --> ApiClient[API Client]
+    ApiClient -->|"Bearer Token"| WebhookServer["/api/* endpoints"]
+```
+
 ## Routing
 
 Hash-based routing for deep linking. The hash is never sent to the server, so the webhook server serves static files without SPA fallback.
