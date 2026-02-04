@@ -1,21 +1,11 @@
 import { Router } from "express";
-import { queue } from "../config.js";
-import {
-  getConfig,
-  saveConfig,
-  getBotDisplayName,
-  CLAUDE_MODELS,
-  type AppConfig,
-} from "@mapthew/shared";
+import { queue } from "../../config.js";
+import { type AdminJob } from "@mapthew/shared";
 
 const router: Router = Router();
 
-// ============================================
-// Queue endpoints
-// ============================================
-
 // GET /api/queue - Queue stats
-router.get("/queue", async (_req, res) => {
+router.get("/", async (_req, res) => {
   try {
     const counts = await queue.getJobCounts();
     res.json({
@@ -35,7 +25,7 @@ router.get("/queue", async (_req, res) => {
 });
 
 // GET /api/queue/jobs - List jobs
-router.get("/queue/jobs", async (req, res) => {
+router.get("/jobs", async (req, res) => {
   try {
     const status = req.query.status as string | undefined;
     const limit = Math.min(parseInt(req.query.limit as string) || 50, 100);
@@ -70,7 +60,7 @@ router.get("/queue/jobs", async (req, res) => {
 });
 
 // GET /api/queue/jobs/:id - Get single job
-router.get("/queue/jobs/:id", async (req, res) => {
+router.get("/jobs/:id", async (req, res) => {
   try {
     const job = await queue.getJob(req.params.id);
     if (!job) {
@@ -98,7 +88,7 @@ router.get("/queue/jobs/:id", async (req, res) => {
 });
 
 // POST /api/queue/jobs/:id/retry - Retry failed job
-router.post("/queue/jobs/:id/retry", async (req, res) => {
+router.post("/jobs/:id/retry", async (req, res) => {
   try {
     const job = await queue.getJob(req.params.id);
     if (!job) {
@@ -115,7 +105,7 @@ router.post("/queue/jobs/:id/retry", async (req, res) => {
 });
 
 // DELETE /api/queue/jobs/:id - Remove job
-router.delete("/queue/jobs/:id", async (req, res) => {
+router.delete("/jobs/:id", async (req, res) => {
   try {
     const job = await queue.getJob(req.params.id);
     if (!job) {
@@ -131,58 +121,59 @@ router.delete("/queue/jobs/:id", async (req, res) => {
   }
 });
 
-// ============================================
-// Config endpoints
-// ============================================
-
-// GET /api/config
-router.get("/config", async (_req, res) => {
+// POST /api/queue/jobs - Create admin job
+router.post("/jobs", async (req, res) => {
   try {
-    const config = await getConfig();
-    res.json({
-      botName: config.botName,
-      botDisplayName: getBotDisplayName(),
-      claudeModel: config.claudeModel,
-      availableModels: CLAUDE_MODELS,
-    });
-  } catch (error) {
-    console.error("Error getting config:", error);
-    res.status(500).json({ error: "Failed to get config" });
-  }
-});
+    const {
+      instruction,
+      jiraBoardId,
+      jiraIssueKey,
+      githubOwner,
+      githubRepo,
+      githubBranchId,
+      githubPrNumber,
+      githubIssueNumber,
+    } = req.body as {
+      instruction?: string;
+      jiraBoardId?: string;
+      jiraIssueKey?: string;
+      githubOwner?: string;
+      githubRepo?: string;
+      githubBranchId?: string;
+      githubPrNumber?: number;
+      githubIssueNumber?: number;
+    };
 
-// PUT /api/config
-router.put("/config", async (req, res) => {
-  try {
-    const { botName, claudeModel } = req.body as Partial<AppConfig>;
-    const config = await getConfig();
-
-    if (botName !== undefined) {
-      config.botName = botName;
+    if (!instruction || typeof instruction !== "string") {
+      res.status(400).json({ error: "instruction is required" });
+      return;
     }
 
-    if (claudeModel !== undefined) {
-      if (!CLAUDE_MODELS.includes(claudeModel)) {
-        res.status(400).json({
-          error: `Invalid model. Must be one of: ${CLAUDE_MODELS.join(", ")}`,
-        });
-        return;
-      }
-      config.claudeModel = claudeModel;
-    }
+    const job: AdminJob = {
+      source: "admin",
+      instruction: instruction.trim(),
+      triggeredBy: "admin",
+      // Optional JIRA context
+      ...(jiraBoardId && { jiraBoardId }),
+      ...(jiraIssueKey && { jiraIssueKey }),
+      // Optional GitHub context
+      ...(githubOwner && { githubOwner }),
+      ...(githubRepo && { githubRepo }),
+      ...(githubBranchId && { githubBranchId }),
+      ...(githubPrNumber && { githubPrNumber }),
+      ...(githubIssueNumber && { githubIssueNumber }),
+    };
 
-    await saveConfig(config);
-
-    const updatedConfig = await getConfig();
-    res.json({
-      botName: updatedConfig.botName,
-      botDisplayName: getBotDisplayName(),
-      claudeModel: updatedConfig.claudeModel,
-      availableModels: CLAUDE_MODELS,
+    const bullJob = await queue.add("process-ticket", job, {
+      attempts: 3,
+      backoff: { type: "exponential", delay: 5000 },
     });
+
+    console.log(`Admin job queued: ${bullJob.id}`);
+    res.json({ success: true, jobId: bullJob.id });
   } catch (error) {
-    console.error("Error updating config:", error);
-    res.status(500).json({ error: (error as Error).message });
+    console.error("Error creating job:", error);
+    res.status(500).json({ error: "Failed to create job" });
   }
 });
 

@@ -86,13 +86,13 @@ export async function postJiraComment(
 }
 
 /**
- * Post a comment to a GitHub PR
+ * Post a comment to a GitHub PR or issue
  */
 export async function postGitHubComment(
   token: string,
   owner: string,
   repo: string,
-  prNumber: number,
+  number: number,
   comment: string,
 ): Promise<CommentResult> {
   if (!token) {
@@ -102,7 +102,7 @@ export async function postGitHubComment(
 
   try {
     const response = await fetch(
-      `https://api.github.com/repos/${owner}/${repo}/issues/${prNumber}/comments`,
+      `https://api.github.com/repos/${owner}/${repo}/issues/${number}/comments`,
       {
         method: "POST",
         headers: {

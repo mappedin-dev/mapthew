@@ -4,6 +4,7 @@ import {
   type GitHubWebhookPayload,
   type SessionCleanupJob,
   isGitHubPRCommentEvent,
+  isGitHubIssueCommentEvent,
   extractBotInstruction,
   extractIssueKeyFromBranch,
   postGitHubComment,
@@ -90,7 +91,7 @@ async function handlePRMerge(payload: GitHubPRPayload): Promise<void> {
 }
 
 /**
- * GitHub webhook endpoint for PR comments and merge events
+ * GitHub webhook endpoint for PR and issue comments and merge events
  */
 router.post("/", githubWebhookAuth, async (req, res) => {
   try {
@@ -126,11 +127,14 @@ router.post("/", githubWebhookAuth, async (req, res) => {
 
     const payload = req.body as GitHubWebhookPayload;
 
-    // Only process new comments on PRs (not issues, not edits/deletes)
-    if (!isGitHubPRCommentEvent(payload)) {
+    const isPR = isGitHubPRCommentEvent(payload);
+    const isIssue = isGitHubIssueCommentEvent(payload);
+
+    // Only process new comments on PRs or issues (not edits/deletes)
+    if (!isPR && !isIssue) {
       return res
         .status(200)
-        .json({ status: "ignored", reason: "not a new PR comment" });
+        .json({ status: "ignored", reason: "not a new PR or issue comment" });
     }
 
     const instruction = extractBotInstruction(payload.comment.body);
@@ -143,15 +147,29 @@ router.post("/", githubWebhookAuth, async (req, res) => {
 
     const { login: owner } = payload.repository.owner;
     const repo = payload.repository.name;
-    const prNumber = payload.issue.number;
+    const number = payload.issue.number;
 
-    // Fetch PR details to get the branch name for session linking
-    const prDetails = await fetchGitHubPRDetails(
-      GITHUB_TOKEN,
-      owner,
-      repo,
-      prNumber,
-    );
+    // Fetch PR details to get the branch name for session linking (only for PRs)
+    let branchName: string | undefined;
+    if (isPR) {
+      const prDetails = await fetchGitHubPRDetails(
+        GITHUB_TOKEN,
+        owner,
+        repo,
+        number,
+      );
+      branchName = prDetails?.branchName;
+
+      // Log session linking info
+      if (branchName) {
+        const issueKey = extractIssueKeyFromBranch(branchName);
+        if (issueKey) {
+          console.log(
+            `[Session] PR #${number} linked to ${issueKey} via branch: ${branchName}`,
+          );
+        }
+      }
+    }
 
     const job: GitHubJob = {
       instruction,
@@ -159,38 +177,30 @@ router.post("/", githubWebhookAuth, async (req, res) => {
       source: "github",
       owner,
       repo,
-      prNumber,
-      branchName: prDetails?.branchName,
+      prNumber: isPR ? number : undefined,
+      issueNumber: isIssue ? number : undefined,
+      branchName,
     };
-
-    // Log session linking info
-    if (prDetails?.branchName) {
-      const issueKey = extractIssueKeyFromBranch(prDetails.branchName);
-      if (issueKey) {
-        console.log(
-          `[Session] PR #${prNumber} linked to ${issueKey} via branch: ${prDetails.branchName}`,
-        );
-      }
-    }
 
     await queue.add("process-ticket", job, {
       attempts: 3,
       backoff: { type: "exponential", delay: 5000 },
     });
 
+    const type = isPR ? "PR" : "issue";
     console.log(
-      `Github Job queued: ${owner}/${repo}#${prNumber} - ${instruction}`,
+      `GitHub Job queued: ${owner}/${repo}#${number} (${type}) - ${instruction}`,
     );
 
     await postGitHubComment(
       GITHUB_TOKEN,
       owner,
       repo,
-      prNumber,
+      number,
       "🤓 Okie dokie!",
     );
 
-    return res.status(200).json({ status: "queued", prNumber });
+    return res.status(200).json({ status: "queued", number, type });
   } catch (error) {
     console.error("GitHub webhook error:", error);
     return res.status(500).json({ error: "Internal server error" });

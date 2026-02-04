@@ -33,19 +33,69 @@ export function Dropdown({ id, value, options, onChange, placeholder }: Dropdown
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  const selectedOption = options.find((opt) => opt.value === value);
-  const displayValue = selectedOption?.label || value || placeholder || "";
-
   const getMenuStyle = (): React.CSSProperties => {
     if (!buttonRef.current) return {};
     const rect = buttonRef.current.getBoundingClientRect();
-    return {
+    
+    // Get viewport dimensions
+    const viewportHeight = window.innerHeight;
+    const viewportWidth = window.innerWidth;
+    
+    // Calculate available space
+    const spaceBelow = viewportHeight - rect.bottom;
+    const spaceAbove = rect.top;
+    
+    // Estimate menu height based on options
+    const estimatedMenuHeight = Math.min(options.length * 48 + 8, 400);
+    
+    // Determine vertical position
+    let bottom: number | undefined;
+    let top: number | undefined;
+    let maxHeight: number;
+    
+    if (spaceBelow >= estimatedMenuHeight || spaceBelow >= spaceAbove) {
+      // Open below - set top position
+      top = rect.bottom + 4;
+      maxHeight = Math.max(100, spaceBelow - 8);
+    } else {
+      // Open above - align bottom to top of button
+      bottom = viewportHeight - rect.top + 4;
+      maxHeight = Math.max(100, spaceAbove - 8);
+    }
+    
+    // Determine horizontal position
+    let left = rect.left;
+    const menuWidth = rect.width;
+    
+    // Check if menu extends beyond right edge
+    if (left + menuWidth > viewportWidth - 8) {
+      left = Math.max(8, viewportWidth - menuWidth - 8);
+    }
+    
+    // Check if menu extends beyond left edge
+    if (left < 8) {
+      left = 8;
+    }
+    
+    const style: React.CSSProperties = {
       position: "fixed",
-      top: rect.bottom + 4,
-      left: rect.left,
-      width: rect.width,
+      left: `${left}px`,
+      width: `${rect.width}px`,
+      maxHeight: `${maxHeight}px`,
+      overflowY: "auto",
     };
+    
+    if (top !== undefined) {
+      style.top = `${top}px`;
+    } else if (bottom !== undefined) {
+      style.bottom = `${bottom}px`;
+    }
+    
+    return style;
   };
+
+  const selectedOption = options.find((opt) => opt.value === value);
+  const displayValue = selectedOption?.label || value || placeholder || "";
 
   return (
     <>
@@ -74,7 +124,7 @@ export function Dropdown({ id, value, options, onChange, placeholder }: Dropdown
         <div
           ref={menuRef}
           style={getMenuStyle()}
-          className="z-50 bg-dark-900 border border-dark-700 rounded-lg shadow-xl overflow-hidden"
+          className="z-50 bg-dark-900 border border-dark-700 rounded-lg shadow-xl"
         >
           {options.map((option) => (
             <button

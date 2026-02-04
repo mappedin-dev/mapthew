@@ -4,10 +4,11 @@
 
 ### Workflow
 
-Mapthew can be triggered from two entry points:
+Mapthew can be triggered from three entry points:
 
 - **JIRA**: Comment `@mapthew` on a ticket to create a new PR
 - **GitHub**: Comment `@mapthew` on an existing PR to request updates
+- **Admin Dashboard**: Create a job manually with custom instructions
 
 ```mermaid
 flowchart TD
@@ -33,13 +34,13 @@ flowchart TD
 
     A -->|/webhook/jira| B
     G -->|/webhook/github| B
+    ADMIN -->|POST /api/queue/jobs| B
     B -->|queue.add| C
     C -->|worker.process| D
     D -->|MCP| J
     D -->|MCP| H
     D -->|generate code| I
 
-    ADMIN -->|/api/*| B
     B -->|read/write| C
 ```
 
@@ -180,6 +181,33 @@ sequenceDiagram
     Claude-->>W: Done
     W->>W: Cleanup workspace
 ```
+
+### Admin-Triggered Job (Manual)
+
+```mermaid
+sequenceDiagram
+    participant Admin as Admin Dashboard
+    participant API as Webhook Server
+    participant BullMQ as BullMQ
+    participant W as Worker
+    participant Claude as Claude Code CLI
+
+    Admin->>API: POST /api/queue/jobs {instruction}
+    API->>BullMQ: queue.add(job)
+    API-->>Admin: {success, jobId}
+
+    BullMQ->>W: Job {instruction, source: "admin"}
+    Note over BullMQ: Auto-retries on failure
+
+    W->>Claude: Execute with instruction
+    Claude->>Claude: Execute task based on instruction
+    Claude-->>W: Done
+    W->>W: Cleanup workspace
+
+    Note over Admin: Job status visible on dashboard
+```
+
+Admin jobs are created directly from the dashboard without external triggers. They don't post completion comments since the status is visible on the dashboard.
 
 ---
 

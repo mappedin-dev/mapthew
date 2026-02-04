@@ -29,9 +29,10 @@ Hash-based routing for deep linking. The hash is never sent to the server, so th
 
 Page URLs should follow the format of existing pages.
 
-- `#/` — Home: job counts, success rate
-- `#/jobs` — Jobs list with status filtering
-- `#/jobs/:id` — Job details with retry/remove
+- `#/` — Home: navigation to other pages
+- `#/tasks` — Tasks list with status filtering
+- `#/tasks/:id` — Task details with retry/remove
+- `#/new-task` — Create admin task with custom instruction
 - `#/settings` — Bot name configuration
 
 ## Development
@@ -41,3 +42,10 @@ Dashboard container runs `vite build --watch`. Output goes to shared Docker volu
 ## Components
 
 When building pages and components. Try and reuse existing components in the `components/` folder within reason. If an existing component doesn't fit, try and create a new reusable components, but do not overload components with too many props. Sometimes it's ok for custom components to be single-use only.
+
+## Styling
+
+- Page titles include an icon
+- Content sections use the `glass-card` class
+- Use existing button classes (`btn-primary`, `btn-danger`) and accent colors
+- Reference existing pages (Settings, Jobs) for patterns

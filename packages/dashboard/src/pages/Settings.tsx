@@ -180,7 +180,13 @@ export default function Settings() {
             </span>
           )}
         </div>
-      </form>
+        </form>
+
+      <div className="text-center pt-8">
+        <p className="text-dark-600 text-sm">
+          {t("settings.version", { version: __APP_VERSION__ })}
+        </p>
+      </div>
     </div>
   );
 }

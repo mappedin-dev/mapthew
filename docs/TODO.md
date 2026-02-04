@@ -6,8 +6,10 @@
 
 - [ ] **Multi-repo support** — Allow Claude to work across multiple repositories for a single ticket.
 
-- [ ] **Bull Board dashboard** — Add a web UI to monitor job queue status, failed jobs, retries.
+- [x] **Bull Board dashboard** — Add a web UI to monitor job queue status, failed jobs, retries.
 
 - [ ] **Logging** — Structured logging with correlation IDs for tracing jobs.
 
 - [ ] **Job history database** — Add SQLite/PostgreSQL to persist completed jobs for long-term history and querying, since Redis only retains recent jobs temporarily.
+
+- [ ] **Slack MCP** - Support the Slack MCP when it is released to the general public

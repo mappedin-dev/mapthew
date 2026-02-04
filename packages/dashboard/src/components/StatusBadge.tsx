@@ -24,7 +24,7 @@ export function StatusBadge({ status, size = "md" }: StatusBadgeProps) {
 
   return (
     <span className={`rounded-full font-medium border ${styles[status]} ${sizeStyles[size]}`}>
-      {t(`jobs.status.${status}`)}
+      {t(`tasks.status.${status}`)}
     </span>
   );
 }

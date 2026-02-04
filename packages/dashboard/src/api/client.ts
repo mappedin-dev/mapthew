@@ -30,6 +30,30 @@ export interface Config {
   botDisplayName: string;
   claudeModel: string;
   availableModels: string[];
+  jiraBaseUrl: string;
+}
+
+// Search result types
+export interface SearchResult {
+  id: string;
+  label: string;
+}
+
+export interface GitHubRepoResult {
+  owner: string;
+  repo: string;
+  label: string;
+}
+
+// Job context for creating admin jobs
+export interface JobContext {
+  jiraBoardId?: string;
+  jiraIssueKey?: string;
+  githubOwner?: string;
+  githubRepo?: string;
+  githubBranchId?: string;
+  githubPrNumber?: number;
+  githubIssueNumber?: number;
 }
 
 // Token getter function, set by ApiTokenProvider
@@ -81,6 +105,51 @@ export const api = {
     fetchJSON<{ success: boolean }>(`/queue/jobs/${id}`, {
       method: "DELETE",
     }),
+
+  createJob: (instruction: string, context?: JobContext) =>
+    fetchJSON<{ success: boolean; jobId: string }>("/queue/jobs", {
+      method: "POST",
+      body: JSON.stringify({ instruction, ...context }),
+    }),
+
+  // Search endpoints
+  searchJiraBoards: (query: string) =>
+    fetchJSON<SearchResult[]>(
+      `/search/jira/boards?q=${encodeURIComponent(query)}`
+    ),
+
+  searchJiraIssues: (query: string, boardId: string) =>
+    fetchJSON<SearchResult[]>(
+      `/search/jira/issues?q=${encodeURIComponent(
+        query
+      )}&board=${encodeURIComponent(boardId)}`
+    ),
+
+  searchGitHubRepos: (query: string) =>
+    fetchJSON<GitHubRepoResult[]>(
+      `/search/github/repos?q=${encodeURIComponent(query)}`
+    ),
+
+  searchGitHubBranches: (owner: string, repo: string, query: string) =>
+    fetchJSON<SearchResult[]>(
+      `/search/github/branches?owner=${encodeURIComponent(
+        owner
+      )}&repo=${encodeURIComponent(repo)}&q=${encodeURIComponent(query)}`
+    ),
+
+  searchGitHubPulls: (owner: string, repo: string, query: string) =>
+    fetchJSON<SearchResult[]>(
+      `/search/github/pulls?owner=${encodeURIComponent(
+        owner
+      )}&repo=${encodeURIComponent(repo)}&q=${encodeURIComponent(query)}`
+    ),
+
+  searchGitHubIssues: (owner: string, repo: string, query: string) =>
+    fetchJSON<SearchResult[]>(
+      `/search/github/issues?owner=${encodeURIComponent(
+        owner
+      )}&repo=${encodeURIComponent(repo)}&q=${encodeURIComponent(query)}`
+    ),
 
   // Config endpoints
   getConfig: () => fetchJSON<Config>("/config"),

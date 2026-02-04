@@ -27,21 +27,21 @@
   },
   "nav": {
     "home": "Home",
-    "jobs": "Jobs",
+    "tasks": "Tasks",
     "settings": "Settings"
   },
   "home": {
     "welcome": "Hi, I'm {{name}}!",
     "description": "I'm your AI intern. Come see what I'm working on.",
-    "viewJobs": "Jobs",
-    "viewJobsDescription": "Monitor past and current jobs",
+    "viewTasks": "Tasks",
+    "viewTasksDescription": "See what I've been doing",
     "settings": "Settings",
-    "settingsDescription": "Update configurations"
+    "settingsDescription": "Manage how I work"
   },
-  "jobs": {
-    "title": "Jobs",
-    "noJobs": "No jobs found",
-    "errorLoading": "Error loading jobs: {{message}}",
+  "tasks": {
+    "title": "Tasks",
+    "noTasks": "No tasks found",
+    "errorLoading": "Error loading tasks: {{message}}",
     "status": {
       "all": "All",
       "waiting": "Waiting",
@@ -59,22 +59,23 @@
       "actions": "Actions"
     }
   },
-  "job": {
-    "backToJobs": "Back to Jobs",
-    "retryJob": "Retry Job",
-    "removeJob": "Remove Job",
-    "notFound": "Job not found",
-    "errorLoading": "Error loading job: {{message}}",
+  "task": {
+    "backToTasks": "Back to Tasks",
+    "retryTask": "Retry Task",
+    "removeTask": "Remove Task",
+    "notFound": "Task not found",
+    "errorLoading": "Error loading task: {{message}}",
     "created": "Created",
     "processed": "Started",
     "finished": "Finished",
     "attempts": "Attempts",
     "timeInQueue": "Time in queue",
     "processingTime": "Processing time",
+    "instruction": "Instruction",
     "error": "Error",
     "previousError": "Previous Attempt Failed",
-    "retriedSuccessfully": "This job failed on a previous attempt but succeeded on retry.",
-    "jobData": "Job Data",
+    "retriedSuccessfully": "This task failed on a previous attempt but succeeded on retry.",
+    "taskData": "Task Data",
     "returnValue": "Return Value"
   },
   "settings": {
@@ -88,7 +89,27 @@
     },
     "claudeModel": {
       "label": "Model",
-      "description": "The model used when processing jobs"
-    }
+      "description": "The model used when processing tasks"
+    },
+    "version": "Version {{version}}"
+  },
+  "newTask": {
+    "button": "Start a new task",
+    "buttonDescription": "Ask me to do something!",
+    "title": "New Task",
+    "instructionLabel": "Instruction",
+    "instructionDescription": "What would you like me to do?",
+    "instructionPlaceholder": "e.g. Fix the typo in the French translation for \"save-button\" in <project>.",
+    "start": "Start",
+    "starting": "Starting...",
+    "contextOptions": "Additional Context (Optional)",
+    "contextDescription": "Point me in the right direction to save some time.",
+    "jiraBoard": "JIRA Board/Space",
+    "jiraTicket": "JIRA Ticket",
+    "githubRepo": "GitHub Repository",
+    "githubBranch": "GitHub Branch",
+    "githubPr": "GitHub Pull Request",
+    "githubIssue": "GitHub Issue",
+    "searchPlaceholder": "Search..."
   }
 }

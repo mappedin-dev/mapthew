@@ -35,7 +35,7 @@ function JobRow({ job }: { job: JobData }) {
   const source = (job.data as { source?: string }).source ?? "unknown";
 
   const handleRowClick = () => {
-    navigate(`/jobs/${job.id}`);
+    navigate(`/tasks/${job.id}`);
   };
 
   const handleActionClick = (e: React.MouseEvent) => {
@@ -96,7 +96,7 @@ export default function Jobs() {
         <svg className="w-7 h-7 text-accent" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
         </svg>
-        {t("jobs.title")}
+        {t("tasks.title")}
       </h1>
 
       <div className="flex gap-2 flex-wrap">
@@ -110,28 +110,28 @@ export default function Jobs() {
                 : "bg-dark-800 text-dark-300 hover:text-white hover:bg-dark-700 border border-dark-700"
             }`}
           >
-            {t(`jobs.status.${s}`)}
+            {t(`tasks.status.${s}`)}
           </button>
         ))}
       </div>
 
       {isLoading && <LoadingSpinner />}
 
-      {error && <ErrorCard message={t("jobs.errorLoading", { message: (error as Error).message })} />}
+      {error && <ErrorCard message={t("tasks.errorLoading", { message: (error as Error).message })} />}
 
-      {jobs && jobs.length === 0 && <EmptyState message={t("jobs.noJobs")} />}
+      {jobs && jobs.length === 0 && <EmptyState message={t("tasks.noTasks")} />}
 
       {jobs && jobs.length > 0 && (
         <div className="glass-card overflow-hidden">
           <table className="w-full">
             <thead>
               <tr className="border-b border-dark-700/50">
-                <th className="text-left py-4 px-4 text-xs font-semibold text-dark-400 uppercase tracking-wider">{t("jobs.table.id")}</th>
-                <th className="text-left py-4 px-4 text-xs font-semibold text-dark-400 uppercase tracking-wider">{t("jobs.table.status")}</th>
-                <th className="text-left py-4 px-4 text-xs font-semibold text-dark-400 uppercase tracking-wider">{t("jobs.table.source")}</th>
-                <th className="text-left py-4 px-4 text-xs font-semibold text-dark-400 uppercase tracking-wider">{t("jobs.table.created")}</th>
-                <th className="text-left py-4 px-4 text-xs font-semibold text-dark-400 uppercase tracking-wider">{t("jobs.table.finished")}</th>
-                <th className="text-left py-4 px-4 text-xs font-semibold text-dark-400 uppercase tracking-wider">{t("jobs.table.actions")}</th>
+                <th className="text-left py-4 px-4 text-xs font-semibold text-dark-400 uppercase tracking-wider">{t("tasks.table.id")}</th>
+                <th className="text-left py-4 px-4 text-xs font-semibold text-dark-400 uppercase tracking-wider">{t("tasks.table.status")}</th>
+                <th className="text-left py-4 px-4 text-xs font-semibold text-dark-400 uppercase tracking-wider">{t("tasks.table.source")}</th>
+                <th className="text-left py-4 px-4 text-xs font-semibold text-dark-400 uppercase tracking-wider">{t("tasks.table.created")}</th>
+                <th className="text-left py-4 px-4 text-xs font-semibold text-dark-400 uppercase tracking-wider">{t("tasks.table.finished")}</th>
+                <th className="text-left py-4 px-4 text-xs font-semibold text-dark-400 uppercase tracking-wider">{t("tasks.table.actions")}</th>
               </tr>
             </thead>
             <tbody>

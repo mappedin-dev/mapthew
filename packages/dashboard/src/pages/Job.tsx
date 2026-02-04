@@ -5,7 +5,8 @@ import { api } from "../api/client";
 import { StatusBadge } from "../components/StatusBadge";
 import { LoadingSpinner } from "../components/LoadingSpinner";
 import { ErrorCard } from "../components/ErrorCard";
-import { DataSection } from "../components/DataSection";
+import { JiraBadge } from "../components/JiraBadge";
+import { GitHubBadge } from "../components/GitHubBadge";
 
 export default function Job() {
   const { t } = useTranslation();
@@ -17,6 +18,11 @@ export default function Job() {
     queryKey: ["job", id],
     queryFn: () => api.getJob(id!),
     enabled: !!id,
+  });
+
+  const { data: config } = useQuery({
+    queryKey: ["config"],
+    queryFn: api.getConfig,
   });
 
   const retryMutation = useMutation({
@@ -33,7 +39,7 @@ export default function Job() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["jobs"] });
       queryClient.invalidateQueries({ queryKey: ["queue-stats"] });
-      navigate("/jobs");
+      navigate("/tasks");
     },
   });
 
@@ -42,13 +48,13 @@ export default function Job() {
   }
 
   if (error) {
-    return <ErrorCard message={t("job.errorLoading", { message: (error as Error).message })} />;
+    return <ErrorCard message={t("task.errorLoading", { message: (error as Error).message })} />;
   }
 
   if (!job) {
     return (
       <div className="glass-card p-6">
-        <p className="text-dark-400">{t("job.notFound")}</p>
+        <p className="text-dark-400">{t("task.notFound")}</p>
       </div>
     );
   }
@@ -71,14 +77,59 @@ export default function Job() {
 
   const queueTime = job.processedOn ? formatDuration(job.processedOn - job.timestamp) : null;
   const processTime = job.processedOn && job.finishedOn ? formatDuration(job.finishedOn - job.processedOn) : null;
+  const instruction = typeof job.data?.instruction === "string" ? job.data.instruction : null;
+  
+  // Extract JIRA issue key from job data
+  const jiraIssueKey = typeof job.data?.issueKey === "string" 
+    ? job.data.issueKey 
+    : typeof job.data?.jiraIssueKey === "string" 
+    ? job.data.jiraIssueKey 
+    : null;
+  
+  const jiraUrl = jiraIssueKey && config?.jiraBaseUrl 
+    ? `${config.jiraBaseUrl.replace(/\/$/, '')}/browse/${jiraIssueKey}`
+    : null;
+  
+  // Extract GitHub info from job data
+  const githubOwner = typeof job.data?.owner === "string" 
+    ? job.data.owner 
+    : typeof job.data?.githubOwner === "string" 
+    ? job.data.githubOwner 
+    : null;
+  
+  const githubRepo = typeof job.data?.repo === "string" 
+    ? job.data.repo 
+    : typeof job.data?.githubRepo === "string" 
+    ? job.data.githubRepo 
+    : null;
+  
+  const githubPrNumber = typeof job.data?.prNumber === "number" 
+    ? job.data.prNumber 
+    : typeof job.data?.githubPrNumber === "number" 
+    ? job.data.githubPrNumber 
+    : null;
+  
+  const githubIssueNumber = typeof job.data?.issueNumber === "number" 
+    ? job.data.issueNumber 
+    : typeof job.data?.githubIssueNumber === "number" 
+    ? job.data.githubIssueNumber 
+    : null;
+  
+  const githubPrUrl = githubOwner && githubRepo && githubPrNumber
+    ? `https://github.com/${githubOwner}/${githubRepo}/pull/${githubPrNumber}`
+    : null;
+  
+  const githubIssueUrl = githubOwner && githubRepo && githubIssueNumber
+    ? `https://github.com/${githubOwner}/${githubRepo}/issues/${githubIssueNumber}`
+    : null;
 
   return (
     <div className="space-y-6">
-      <Link to="/jobs" className="inline-flex items-center gap-2 text-dark-400 hover:text-white transition-colors">
+      <Link to="/tasks" className="inline-flex items-center gap-2 text-dark-400 hover:text-white transition-colors">
         <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
         </svg>
-        {t("job.backToJobs")}
+        {t("task.backToTasks")}
       </Link>
 
       <div className="flex items-center justify-between">
@@ -93,7 +144,7 @@ export default function Job() {
               disabled={retryMutation.isPending}
               className="btn-primary disabled:opacity-50"
             >
-              {t("job.retryJob")}
+              {t("task.retryTask")}
             </button>
           )}
           <button
@@ -101,50 +152,82 @@ export default function Job() {
             disabled={removeMutation.isPending}
             className="btn-danger disabled:opacity-50"
           >
-            {t("job.removeJob")}
+            {t("task.removeTask")}
           </button>
         </div>
       </div>
 
       <div className="grid grid-cols-4 gap-4">
         <div className="glass-card p-5">
-          <p className="text-xs font-medium text-dark-400 uppercase tracking-wider mb-1">{t("job.created")}</p>
+          <p className="text-xs font-medium text-dark-400 uppercase tracking-wider mb-1">{t("task.created")}</p>
           <p className="text-white font-medium">{createdAt}</p>
         </div>
         <div className="glass-card p-5">
-          <p className="text-xs font-medium text-dark-400 uppercase tracking-wider mb-1">{t("job.processed")}</p>
+          <p className="text-xs font-medium text-dark-400 uppercase tracking-wider mb-1">{t("task.processed")}</p>
           <p className="text-white font-medium">{processedAt}</p>
-          {queueTime && <p className="text-dark-400 text-sm mt-1">{t("job.timeInQueue")}: {queueTime}</p>}
+          {queueTime && <p className="text-dark-400 text-sm mt-1">{t("task.timeInQueue")}: {queueTime}</p>}
         </div>
         <div className="glass-card p-5">
-          <p className="text-xs font-medium text-dark-400 uppercase tracking-wider mb-1">{t("job.finished")}</p>
+          <p className="text-xs font-medium text-dark-400 uppercase tracking-wider mb-1">{t("task.finished")}</p>
           <p className="text-white font-medium">{finishedAt}</p>
-          {processTime && <p className="text-dark-400 text-sm mt-1">{t("job.processingTime")}: {processTime}</p>}
+          {processTime && <p className="text-dark-400 text-sm mt-1">{t("task.processingTime")}: {processTime}</p>}
         </div>
         <div className="glass-card p-5">
-          <p className="text-xs font-medium text-dark-400 uppercase tracking-wider mb-1">{t("job.attempts")}</p>
+          <p className="text-xs font-medium text-dark-400 uppercase tracking-wider mb-1">{t("task.attempts")}</p>
           <p className="text-white font-medium">{job.attemptsMade}</p>
         </div>
       </div>
 
+      {instruction && (
+        <div className="glass-card p-6 border-accent/40 bg-accent/5">
+          <h2 className="text-xs font-medium text-dark-400 uppercase tracking-wider mb-3">{t("task.instruction")}</h2>
+          <p className="text-white leading-relaxed mb-4">{instruction}</p>
+          {(jiraUrl || githubPrUrl || githubIssueUrl) && (
+            <div className="flex items-center gap-2">
+              {jiraUrl && jiraIssueKey && (
+                <JiraBadge url={jiraUrl} label={jiraIssueKey} />
+              )}
+              {githubPrUrl && githubPrNumber && (
+                <GitHubBadge url={githubPrUrl} label={`#${githubPrNumber}`} />
+              )}
+              {githubIssueUrl && githubIssueNumber && (
+                <GitHubBadge url={githubIssueUrl} label={`#${githubIssueNumber}`} />
+              )}
+            </div>
+          )}
+        </div>
+      )}
+
       {job.failedReason && job.status === "failed" && (
         <div className="glass-card p-6 border-red-500/30 bg-red-500/5">
-          <h2 className="text-lg font-semibold text-red-400 mb-3">{t("job.error")}</h2>
+          <h2 className="text-lg font-semibold text-red-400 mb-3">{t("task.error")}</h2>
           <pre className="text-red-300 text-sm whitespace-pre-wrap font-mono">{job.failedReason}</pre>
         </div>
       )}
 
       {job.failedReason && job.status === "completed" && (
         <div className="glass-card p-6 border-yellow-500/30 bg-yellow-500/5">
-          <h2 className="text-lg font-semibold text-yellow-400 mb-3">{t("job.previousError")}</h2>
-          <p className="text-dark-300 text-sm mb-3">{t("job.retriedSuccessfully")}</p>
+          <h2 className="text-lg font-semibold text-yellow-400 mb-3">{t("task.previousError")}</h2>
+          <p className="text-dark-300 text-sm mb-3">{t("task.retriedSuccessfully")}</p>
           <pre className="text-yellow-300/80 text-sm whitespace-pre-wrap font-mono">{job.failedReason}</pre>
         </div>
       )}
 
-      <div className="space-y-6">
-        <DataSection title={t("job.jobData")} data={job.data} />
-        {job.returnvalue !== undefined && <DataSection title={t("job.returnValue")} data={job.returnvalue} />}
+      <div className="glass-card p-6 space-y-6">
+        <div>
+          <h2 className="text-sm font-medium text-dark-200 mb-3">{t("task.taskData")}</h2>
+          <pre className="bg-dark-950/50 p-4 rounded-lg overflow-auto text-sm font-mono text-dark-200 border border-dark-700/50">
+            {JSON.stringify(job.data, null, 2)}
+          </pre>
+        </div>
+        {job.returnvalue !== undefined && (
+          <div>
+            <h2 className="text-sm font-medium text-dark-200 mb-3">{t("task.returnValue")}</h2>
+            <pre className="bg-dark-950/50 p-4 rounded-lg overflow-auto text-sm font-mono text-dark-200 border border-dark-700/50">
+              {JSON.stringify(job.returnvalue, null, 2)}
+            </pre>
+          </div>
+        )}
       </div>
     </div>
   );
