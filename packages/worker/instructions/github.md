@@ -35,7 +35,7 @@ When creating a PR:
    - If a section doesn't apply, mark it as "N/A" or remove it if optional
 4. If no template exists:
    - Write a clear description with: Summary, Changes Made, and Testing Notes
-5. At the bottom of the PR description, add: `---\n🤖 *Beep boop. I'm a bot.*`
+5. At the bottom of the PR description, add: `---\n🤖 *Beep boop. I'm a bot and I just created this PR 😎.*`
 
 ### Responding to Comments
 
