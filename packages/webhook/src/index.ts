@@ -7,7 +7,7 @@ import type { RequestWithRawBody } from "./middleware/index.js";
 import { jwtCheck, requireAdminPermission } from "./middleware/auth.js";
 import jiraRoutes from "./routes/jira.js";
 import githubRoutes from "./routes/github.js";
-import apiRoutes from "./routes/api.js";
+import apiRoutes from "./routes/api/index.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 

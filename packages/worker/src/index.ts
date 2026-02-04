@@ -1,6 +1,7 @@
 import {
   createWorker,
   type BullJob,
+  isAdminJob,
   isGitHubJob,
   isJiraJob,
   postGitHubComment,
@@ -32,15 +33,21 @@ const jiraCredentials = {
  */
 async function postComment(job: Job, comment: string): Promise<void> {
   if (isGitHubJob(job)) {
-    await postGitHubComment(
-      GITHUB_TOKEN,
-      job.owner,
-      job.repo,
-      job.prNumber,
-      comment
-    );
+    const number = job.prNumber ?? job.issueNumber;
+    if (number) {
+      await postGitHubComment(
+        GITHUB_TOKEN,
+        job.owner,
+        job.repo,
+        number,
+        comment
+      );
+    }
   } else if (isJiraJob(job)) {
     await postJiraComment(jiraCredentials, job.issueKey, comment);
+  } else if (isAdminJob(job)) {
+    // Admin jobs don't have an external source to post comments to
+    // Status is visible on the dashboard
   }
 }
 

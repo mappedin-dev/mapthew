@@ -78,7 +78,7 @@ export function Header() {
                 {t("nav.home")}
               </NavItem>
               <NavItem
-                to="/jobs"
+                to="/tasks"
                 index={1}
                 icon={
                   <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -86,7 +86,7 @@ export function Header() {
                   </svg>
                 }
               >
-                {t("nav.jobs")}
+                {t("nav.tasks")}
               </NavItem>
             </NavTabs>
           </div>

@@ -5,6 +5,7 @@ import {
   type Job,
   isGitHubJob,
   isJiraJob,
+  isAdminJob,
   getBotName,
   getBranchPrefix,
 } from "@mapthew/shared";
@@ -34,6 +35,50 @@ function loadInstructions(): string[] {
 const instructionTemplates = loadInstructions();
 
 /**
+ * Extract GitHub context from any job type
+ */
+function getGitHubContext(job: Job) {
+  if (isGitHubJob(job)) {
+    return {
+      owner: job.owner,
+      repo: job.repo,
+      prNumber: job.prNumber ? String(job.prNumber) : undefined,
+      issueNumber: job.issueNumber ? String(job.issueNumber) : undefined,
+      branchId: job.branchId,
+    };
+  }
+  if (isAdminJob(job)) {
+    return {
+      owner: job.githubOwner,
+      repo: job.githubRepo,
+      prNumber: job.githubPrNumber ? String(job.githubPrNumber) : undefined,
+      issueNumber: job.githubIssueNumber ? String(job.githubIssueNumber) : undefined,
+      branchId: job.githubBranchId,
+    };
+  }
+  return {};
+}
+
+/**
+ * Extract JIRA context from any job type
+ */
+function getJiraContext(job: Job) {
+  if (isJiraJob(job)) {
+    return {
+      issueKey: job.issueKey,
+      boardId: undefined,
+    };
+  }
+  if (isAdminJob(job)) {
+    return {
+      issueKey: job.jiraIssueKey,
+      boardId: job.jiraBoardId,
+    };
+  }
+  return {};
+}
+
+/**
  * Build the prompt for Claude Code CLI
  *
  * All instruction files are loaded and concatenated. Job-specific
@@ -41,19 +86,23 @@ const instructionTemplates = loadInstructions();
  * are replaced with "unknown".
  */
 export function buildPrompt(job: Job): string {
-  // Build job context for template replacement
+  const github = getGitHubContext(job);
+  const jira = getJiraContext(job);
+
   const context: Record<string, string> = {
+    // Common
     triggeredBy: job.triggeredBy,
     instruction: job.instruction,
     botName: getBotName(),
     branchPrefix: getBranchPrefix(),
-    // GitHub context (defaults to "unknown")
-    "github.owner": isGitHubJob(job) ? job.owner : "unknown",
-    "github.repo": isGitHubJob(job) ? job.repo : "unknown",
-    "github.prNumber":
-      isGitHubJob(job) && job.prNumber ? String(job.prNumber) : "unknown",
-    // Jira context (defaults to "unknown")
-    "jira.issueKey": isJiraJob(job) ? job.issueKey : "unknown",
+    // GitHub
+    "github.owner": github.owner ?? "unknown",
+    "github.repo": github.repo ?? "unknown",
+    "github.prNumber": github.prNumber ?? "unknown",
+    "github.branchId": github.branchId ?? "unknown",
+    // JIRA
+    "jira.issueKey": jira.issueKey ?? "unknown",
+    "jira.boardId": jira.boardId ?? "unknown",
   };
 
   // Process all instruction templates

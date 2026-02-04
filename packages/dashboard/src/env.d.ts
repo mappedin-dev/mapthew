@@ -2,3 +2,6 @@
 declare const __AUTH0_DOMAIN__: string;
 declare const __AUTH0_CLIENT_ID__: string;
 declare const __AUTH0_AUDIENCE__: string;
+
+// App version from package.json
+declare const __APP_VERSION__: string;

@@ -18,19 +18,37 @@ export interface JiraJob extends BaseJob {
 }
 
 /**
- * Job triggered from GitHub PR comment
+ * Job triggered from GitHub PR or issue comment
  */
 export interface GitHubJob extends BaseJob {
   source: "github";
   owner: string;
   repo: string;
-  prNumber: number;
+  prNumber?: number;
+  issueNumber?: number;
+  branchId?: string;
+}
+
+/**
+ * Job triggered from admin dashboard
+ */
+export interface AdminJob extends BaseJob {
+  source: "admin";
+  // Optional JIRA context
+  jiraBoardId?: string;
+  jiraIssueKey?: string;
+  // Optional GitHub context
+  githubOwner?: string;
+  githubRepo?: string;
+  githubBranchId?: string;
+  githubPrNumber?: number;
+  githubIssueNumber?: number;
 }
 
 /**
  * Discriminated union of all job types
  */
-export type Job = JiraJob | GitHubJob;
+export type Job = JiraJob | GitHubJob | AdminJob;
 
 /**
  * Type guard for JiraJob
@@ -44,6 +62,13 @@ export function isJiraJob(job: Job): job is JiraJob {
  */
 export function isGitHubJob(job: Job): job is GitHubJob {
   return job.source === "github";
+}
+
+/**
+ * Type guard for AdminJob
+ */
+export function isAdminJob(job: Job): job is AdminJob {
+  return job.source === "admin";
 }
 
 /**
@@ -131,6 +156,17 @@ export interface GitHubWebhookPayload {
 export function isGitHubPRCommentEvent(payload: GitHubWebhookPayload): boolean {
   return (
     payload.action === "created" && payload.issue?.pull_request !== undefined
+  );
+}
+
+/**
+ * Check if a GitHub webhook payload is an issue comment event
+ */
+export function isGitHubIssueCommentEvent(
+  payload: GitHubWebhookPayload
+): boolean {
+  return (
+    payload.action === "created" && payload.issue?.pull_request === undefined
   );
 }
 
