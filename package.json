@@ -14,7 +14,8 @@
     "worker": "pnpm --filter @mapthew/worker",
     "dashboard": "pnpm --filter @mapthew/dashboard",
     "mcp": "pnpm --filter @mapthew/integration-tests-mcp",
-    "tunnel": "cloudflared tunnel --config cloudflare-tunnel-config.yml run"
+    "tunnel": "cloudflared tunnel --config cloudflare-tunnel-config.yml run",
+    "requests:init": "bash scripts/sign-webhook.sh"
   },
   "devDependencies": {
     "cloudflared": "^0.5.3",

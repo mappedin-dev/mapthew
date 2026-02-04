@@ -1,15 +1,10 @@
 import path from "path";
 import { fileURLToPath } from "url";
 import express, { type Request, type Response } from "express";
-import {
-  PORT,
-  REDIS_URL,
-  queue,
-  JIRA_WEBHOOK_SECRET,
-  GITHUB_WEBHOOK_SECRET,
-} from "./config.js";
+import { PORT, REDIS_URL } from "./config.js";
 import { getBotName, initConfigStore, getConfig } from "@mapthew/shared";
 import type { RequestWithRawBody } from "./middleware/index.js";
+import { jwtCheck, requireAdminPermission } from "./middleware/auth.js";
 import jiraRoutes from "./routes/jira.js";
 import githubRoutes from "./routes/github.js";
 import apiRoutes from "./routes/api.js";
@@ -45,7 +40,7 @@ app.use(
 );
 
 // Routes
-app.use("/api", apiRoutes);
+app.use("/api", jwtCheck, requireAdminPermission, apiRoutes);
 app.use("/webhook/jira", jiraRoutes);
 app.use("/webhook/github", githubRoutes);
 
@@ -58,14 +53,4 @@ app.get("/health", (_req, res) => {
 app.listen(PORT, () => {
   console.log(`Webhook server listening on port ${PORT}`);
   console.log(`  Listening as: @${getBotName()}`);
-  console.log(
-    `  JIRA webhook secret: ${
-      JIRA_WEBHOOK_SECRET ? "configured" : "NOT configured"
-    }`
-  );
-  console.log(
-    `  GitHub webhook secret: ${
-      GITHUB_WEBHOOK_SECRET ? "configured" : "NOT configured"
-    }`
-  );
 });

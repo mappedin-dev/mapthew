@@ -4,21 +4,13 @@ import { JIRA_WEBHOOK_SECRET } from "../config.js";
 import type { RequestWithRawBody } from "./index.js";
 
 /**
- * Middleware to verify JIRA webhook secret
+ * Middleware to verify JIRA webhook signature
  */
 export function jiraWebhookAuth(
   req: Request,
   res: Response,
   next: NextFunction
 ): void {
-  if (!JIRA_WEBHOOK_SECRET) {
-    console.warn(
-      "JIRA_WEBHOOK_SECRET not configured - skipping signature verification"
-    );
-    next();
-    return;
-  }
-
   const signature =
     (req.headers["x-hub-signature-256"] as string) ||
     (req.headers["x-hub-signature"] as string);
@@ -36,7 +28,7 @@ export function jiraWebhookAuth(
     return;
   }
 
-  if (!verifyHmacSignature(JIRA_WEBHOOK_SECRET, rawBody, signature)) {
+  if (!verifyHmacSignature(JIRA_WEBHOOK_SECRET!, rawBody, signature)) {
     console.warn("Invalid JIRA webhook signature");
     res.status(401).json({ error: "Invalid webhook signature" });
     return;

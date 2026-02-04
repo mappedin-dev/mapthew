@@ -24,6 +24,7 @@ services:
       - ./packages/dashboard/src:/app/packages/dashboard/src
       - ./packages/dashboard/index.html:/app/packages/dashboard/index.html
       - dashboard-dist:/app/packages/dashboard/dist
+      - ./.env:/app/.env:ro
 
   webhook:
     container_name: webhook

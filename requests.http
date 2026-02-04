@@ -1,50 +1,30 @@
 # Use with VS Code REST Client extension or IntelliJ HTTP Client
 #
-# Webhook signatures are optional for local testing (when JIRA_WEBHOOK_SECRET is not set).
-# In production, set JIRA_WEBHOOK_SECRET to require signature verification.
+# Webhook requests require HMAC-SHA256 signatures.
+# Run: pnpm requests:init to compute and populate the signature in .env
 
 @baseUrl = http://localhost:3000
 @tunnelUrl = https://ben.mappedin.io
 @ticketKey = MPTW-1
 @botName = mapthew
+@jiraSignature = {{$dotenv REQUESTS_HTTP_JIRA_WEBHOOK_SIGNATURE}}
 
 ### Health Check
 GET {{baseUrl}}/health
 
+###############################################
+# JIRA Webhooks (require X-Hub-Signature-256)
+###############################################
+
 ### Trigger Bot Workflow (simulated JIRA comment)
 POST {{baseUrl}}/webhook/jira
 Content-Type: application/json
+X-Hub-Signature-256: sha256={{jiraSignature}}
 
 {
   "webhookEvent": "comment_created",
   "comment": {
     "body": "@{{botName}} implement the change described in this ticket",
-    "author": { "displayName": "Test Developer" }
-  },
-  "issue": { "key": "{{ticketKey}}" }
-}
-
-### Non-bot comment (should be ignored)
-POST {{baseUrl}}/webhook/jira
-Content-Type: application/json
-
-{
-  "webhookEvent": "comment_created",
-  "comment": {
-    "body": "This is a regular comment without the trigger",
-    "author": { "displayName": "Product Manager" }
-  },
-  "issue": { "key": "{{ticketKey}}" }
-}
-
-### Non-comment event (should be ignored)
-POST {{baseUrl}}/webhook/jira
-Content-Type: application/json
-
-{
-  "webhookEvent": "issue_updated",
-  "comment": {
-    "body": "@{{botName}} this won't trigger because event type is wrong",
     "author": { "displayName": "Test Developer" }
   },
   "issue": { "key": "{{ticketKey}}" }
@@ -57,6 +37,7 @@ Content-Type: application/json
 ### Test tunnel connection
 POST {{tunnelUrl}}/webhook/jira
 Content-Type: application/json
+X-Hub-Signature-256: sha256={{jiraSignature}}
 
 {
   "webhookEvent": "comment_created",

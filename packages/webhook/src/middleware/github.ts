@@ -4,21 +4,13 @@ import { GITHUB_WEBHOOK_SECRET } from "../config.js";
 import type { RequestWithRawBody } from "./index.js";
 
 /**
- * Middleware to verify GitHub webhook secret
+ * Middleware to verify GitHub webhook signature
  */
 export function githubWebhookAuth(
   req: Request,
   res: Response,
   next: NextFunction
 ): void {
-  if (!GITHUB_WEBHOOK_SECRET) {
-    console.warn(
-      "GITHUB_WEBHOOK_SECRET not configured - skipping signature verification"
-    );
-    next();
-    return;
-  }
-
   const signature = req.headers["x-hub-signature-256"] as string;
 
   if (!signature) {
@@ -34,7 +26,7 @@ export function githubWebhookAuth(
     return;
   }
 
-  if (!verifyHmacSignature(GITHUB_WEBHOOK_SECRET, rawBody, signature)) {
+  if (!verifyHmacSignature(GITHUB_WEBHOOK_SECRET!, rawBody, signature)) {
     console.warn("Invalid GitHub webhook signature");
     res.status(401).json({ error: "Invalid webhook signature" });
     return;
