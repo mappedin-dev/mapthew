@@ -69,6 +69,24 @@ Set `BOT_NAME` to customize the trigger (e.g., `@mybot` instead of `@mapthew`), 
 | **Auth0 Client ID**       | Dashboard SPA client ID              |
 | **Auth0 Audience**        | API identifier for JWT validation    |
 
+## Webhooks
+
+Configure your webhooks to point to your tunnel or production URL.
+
+### JIRA
+
+Point to `/webhook/jira` for ticket comment triggers.
+
+### GitHub
+
+Point to `/webhook/github` and enable these events:
+
+- Commit comments
+- Discussion comments
+- Issue comments
+- Pull request review comments
+- Pull requests
+
 ## Setup
 
 1. Clone the repository and install dependencies:
@@ -104,9 +122,7 @@ Set `BOT_NAME` to customize the trigger (e.g., `@mybot` instead of `@mapthew`), 
 
 4. Start a [cloudflare tunnel](#cloudflare-tunnel).
 
-5. Configure production services to point to your tunnel:
-   - **JIRA**: Point to `/webhook/jira` for ticket comment triggers
-   - **GitHub**: Point to `/webhook/github` for PR comment triggers (configure for `issue_comment` events)
+5. Configure your [webhooks](#webhooks) to point to your tunnel.
 
 ## Unit Testing
 
