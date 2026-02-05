@@ -71,7 +71,7 @@ Set `BOT_NAME` to customize the trigger (e.g., `@mybot` instead of `@mapthew`), 
 
 ## Webhooks
 
-Configure your webhooks to point to your tunnel or production URL.
+Configure your webhooks to point to your tunnel or production URL. Make sure the webhook is configured to send a JSON payload.
 
 ### JIRA
 

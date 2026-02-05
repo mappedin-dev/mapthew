@@ -13,3 +13,5 @@
 - [ ] **Job history database** — Add SQLite/PostgreSQL to persist completed jobs for long-term history and querying, since Redis only retains recent jobs temporarily.
 
 - [ ] **Slack MCP** - Support the Slack MCP when it is released to the general public
+
+- [ ] **More Logging** - Support viewing the worker logs from the dashboard

@@ -8,7 +8,7 @@ import {
   postGitHubComment,
   getBotName,
 } from "@mapthew/shared";
-import { queue, GITHUB_TOKEN } from "../config.js";
+import { queue, GITHUB_TOKEN, VERBOSE_LOGS } from "../config.js";
 import { githubWebhookAuth } from "../middleware/index.js";
 
 const router: Router = Router();
@@ -27,6 +27,8 @@ router.post("/", githubWebhookAuth, async (req, res) => {
 
     // Only process issue_comment events
     if (event !== "issue_comment") {
+      if (VERBOSE_LOGS)
+        console.log(`GitHub webhook ignored: event type "${event}"`);
       return res
         .status(200)
         .json({ status: "ignored", reason: `event type: ${event}` });
@@ -39,6 +41,10 @@ router.post("/", githubWebhookAuth, async (req, res) => {
 
     // Only process new comments on PRs or issues (not edits/deletes)
     if (!isPR && !isIssue) {
+      if (VERBOSE_LOGS)
+        console.log(
+          `GitHub webhook ignored: not a new PR or issue comment (action: ${payload.action})`,
+        );
       return res
         .status(200)
         .json({ status: "ignored", reason: "not a new PR or issue comment" });
@@ -46,6 +52,13 @@ router.post("/", githubWebhookAuth, async (req, res) => {
 
     const instruction = extractBotInstruction(payload.comment.body);
     if (!instruction) {
+      const { login: owner } = payload.repository.owner;
+      const repo = payload.repository.name;
+      const number = payload.issue.number;
+      if (VERBOSE_LOGS)
+        console.log(
+          `GitHub webhook ignored: no @${getBotName()} trigger in ${owner}/${repo}#${number} comment by ${payload.comment.user.login}`,
+        );
       return res.status(200).json({
         status: "ignored",
         reason: `no @${getBotName()} trigger found`,

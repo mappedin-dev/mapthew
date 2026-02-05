@@ -7,7 +7,7 @@ import {
   postJiraComment,
   getBotName,
 } from "@mapthew/shared";
-import { queue, jiraCredentials } from "../config.js";
+import { queue, jiraCredentials, VERBOSE_LOGS } from "../config.js";
 import { jiraWebhookAuth } from "../middleware/index.js";
 
 const router: Router = Router();
@@ -28,6 +28,10 @@ router.post("/", jiraWebhookAuth, async (req, res) => {
     const payload = req.body as WebhookPayload;
 
     if (!isCommentCreatedEvent(payload)) {
+      if (VERBOSE_LOGS)
+        console.log(
+          `Jira webhook ignored: not a comment_created event (webhookEvent: ${payload.webhookEvent ?? "unknown"})`,
+        );
       return res
         .status(200)
         .json({ status: "ignored", reason: "not a comment_created event" });
@@ -35,6 +39,10 @@ router.post("/", jiraWebhookAuth, async (req, res) => {
 
     const instruction = extractBotInstruction(payload.comment.body);
     if (!instruction) {
+      if (VERBOSE_LOGS)
+        console.log(
+          `Jira webhook ignored: no @${getBotName()} trigger in ${payload.issue.key} comment by ${payload.comment.author.displayName}`,
+        );
       return res.status(200).json({
         status: "ignored",
         reason: `no @${getBotName()} trigger found`,
