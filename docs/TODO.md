@@ -15,3 +15,5 @@
 - [ ] **Slack MCP** - Support the Slack MCP when it is released to the general public
 
 - [ ] **More Logging** - Support viewing the worker logs from the dashboard
+
+- [ ] **Prompt Management** - Split up prompts by task
