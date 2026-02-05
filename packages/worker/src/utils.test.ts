@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { getReadableId } from "./utils.js";
-import type { JiraJob, GitHubJob, AdminJob } from "@mapthew/shared";
+import type { JiraJob, GitHubJob, AdminJob } from "@mapthew/shared/types";
 
 describe("getReadableId", () => {
   describe("JiraJob", () => {

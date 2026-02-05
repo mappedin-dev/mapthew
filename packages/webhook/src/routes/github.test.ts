@@ -11,6 +11,7 @@ const mockQueue = vi.hoisted(() => ({
 vi.mock("../config.js", () => ({
   queue: mockQueue,
   GITHUB_TOKEN: "mock-github-token",
+  VERBOSE_LOGS: false,
 }));
 
 // Mock middleware to skip signature verification in tests
@@ -18,18 +19,25 @@ vi.mock("../middleware/index.js", () => ({
   githubWebhookAuth: (_req: unknown, _res: unknown, next: () => void) => next(),
 }));
 
-// Mock @mapthew/shared
-vi.mock("@mapthew/shared", async () => {
-  const actual = await vi.importActual("@mapthew/shared");
+// Mock @mapthew/shared subpaths
+vi.mock("@mapthew/shared/api", async () => {
+  const actual = await vi.importActual("@mapthew/shared/api");
   return {
     ...actual,
     postGitHubComment: vi.fn().mockResolvedValue({ success: true }),
+  };
+});
+
+vi.mock("@mapthew/shared/utils", async () => {
+  const actual = await vi.importActual("@mapthew/shared/utils");
+  return {
+    ...actual,
     getBotName: vi.fn().mockReturnValue("mapthew"),
   };
 });
 
 import githubRouter from "./github.js";
-import { postGitHubComment } from "@mapthew/shared";
+import { postGitHubComment } from "@mapthew/shared/api";
 
 function createApp() {
   const app = express();

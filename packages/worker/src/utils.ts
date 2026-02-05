@@ -1,4 +1,5 @@
-import { isAdminJob, isGitHubJob, isJiraJob, Job } from "@mapthew/shared";
+import { isAdminJob, isGitHubJob, isJiraJob } from "@mapthew/shared/utils";
+import type { Job } from "@mapthew/shared/types";
 
 /**
  * Get a job identifier for logging

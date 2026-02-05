@@ -1,11 +1,8 @@
 import { Router } from "express";
-import {
-  getConfig,
-  saveConfig,
-  CLAUDE_MODELS,
-  isValidJiraUrl,
-  type AppConfig,
-} from "@mapthew/shared";
+import { getConfig, saveConfig } from "@mapthew/shared/config";
+import { CLAUDE_MODELS } from "@mapthew/shared/constants";
+import { isValidJiraUrl } from "@mapthew/shared/utils";
+import type { AppConfig } from "@mapthew/shared/types";
 
 const router: Router = Router();
 

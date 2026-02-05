@@ -2,9 +2,9 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import express from "express";
 import request from "supertest";
 
-// Mock @mapthew/shared before importing the route
-vi.mock("@mapthew/shared", async () => {
-  const actual = await vi.importActual("@mapthew/shared");
+// Mock @mapthew/shared subpaths before importing the route
+vi.mock("@mapthew/shared/config", async () => {
+  const actual = await vi.importActual("@mapthew/shared/config");
   return {
     ...actual,
     getConfig: vi.fn().mockResolvedValue({
@@ -13,22 +13,11 @@ vi.mock("@mapthew/shared", async () => {
       jiraBaseUrl: "https://test.atlassian.net",
     }),
     saveConfig: vi.fn().mockResolvedValue(undefined),
-    getBotDisplayName: vi.fn().mockReturnValue("Testbot"),
-    CLAUDE_MODELS: ["claude-sonnet-4-5", "claude-haiku-4-5", "claude-opus-4-5"],
-    isValidJiraUrl: (url: string) => {
-      if (!url) return true;
-      try {
-        const parsed = new URL(url);
-        return parsed.protocol === "https:";
-      } catch {
-        return false;
-      }
-    },
   };
 });
 
 import configRouter from "./config.js";
-import { getConfig, saveConfig } from "@mapthew/shared";
+import { getConfig, saveConfig } from "@mapthew/shared/config";
 
 function createApp() {
   const app = express();
@@ -126,7 +115,7 @@ describe("Config API routes", () => {
     });
 
     it("returns 500 when saveConfig throws", async () => {
-      const { saveConfig: mockSaveConfig } = await import("@mapthew/shared");
+      const { saveConfig: mockSaveConfig } = await import("@mapthew/shared/config");
       vi.mocked(mockSaveConfig).mockRejectedValueOnce(new Error("Redis connection failed"));
 
       const app = createApp();

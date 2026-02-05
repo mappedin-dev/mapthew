@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { queue } from "../../config.js";
-import { type AdminJob, type QueueStats, type JobData, type AdminJobContext } from "@mapthew/shared";
+import { type AdminJob, type QueueStats, type JobData, type AdminJobContext } from "@mapthew/shared/types";
 
 const router: Router = Router();
 

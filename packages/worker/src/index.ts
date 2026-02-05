@@ -1,14 +1,7 @@
-import {
-  createWorker,
-  type BullJob,
-  isAdminJob,
-  isGitHubJob,
-  isJiraJob,
-  postGitHubComment,
-  postJiraComment,
-  type Job,
-  getBotName,
-} from "@mapthew/shared";
+import { createWorker, type BullJob } from "@mapthew/shared/queue";
+import type { Job } from "@mapthew/shared/types";
+import { isAdminJob, isGitHubJob, isJiraJob, getBotName } from "@mapthew/shared/utils";
+import { postGitHubComment, postJiraComment } from "@mapthew/shared/api";
 import { invokeClaudeCode } from "./claude.js";
 import { getReadableId } from "./utils.js";
 import fs from "fs/promises";

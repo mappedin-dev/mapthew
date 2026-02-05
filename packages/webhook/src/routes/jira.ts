@@ -1,12 +1,7 @@
 import { Router } from "express";
-import {
-  type JiraJob,
-  type WebhookPayload,
-  isCommentCreatedEvent,
-  extractBotInstruction,
-  postJiraComment,
-  getBotName,
-} from "@mapthew/shared";
+import type { JiraJob, WebhookPayload } from "@mapthew/shared/types";
+import { isCommentCreatedEvent, extractBotInstruction, getBotName } from "@mapthew/shared/utils";
+import { postJiraComment } from "@mapthew/shared/api";
 import { queue, jiraCredentials, VERBOSE_LOGS } from "../config.js";
 import { jiraWebhookAuth } from "../middleware/index.js";
 

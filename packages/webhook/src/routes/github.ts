@@ -1,13 +1,7 @@
 import { Router } from "express";
-import {
-  type GitHubJob,
-  type GitHubWebhookPayload,
-  isGitHubPRCommentEvent,
-  isGitHubIssueCommentEvent,
-  extractBotInstruction,
-  postGitHubComment,
-  getBotName,
-} from "@mapthew/shared";
+import type { GitHubJob, GitHubWebhookPayload } from "@mapthew/shared/types";
+import { isGitHubPRCommentEvent, isGitHubIssueCommentEvent, extractBotInstruction, getBotName } from "@mapthew/shared/utils";
+import { postGitHubComment } from "@mapthew/shared/api";
 import { queue, GITHUB_TOKEN, VERBOSE_LOGS } from "../config.js";
 import { githubWebhookAuth } from "../middleware/index.js";
 

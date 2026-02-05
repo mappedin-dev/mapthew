@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
+import { parseJobData } from "@mapthew/shared/utils";
 import { api } from "../api/client";
 import { StatusBadge } from "../components/StatusBadge";
 import { LoadingSpinner } from "../components/LoadingSpinner";
@@ -78,14 +79,7 @@ export default function Job() {
   const queueTime = job.processedOn ? formatDuration(job.processedOn - job.timestamp) : null;
   const processTime = job.processedOn && job.finishedOn ? formatDuration(job.finishedOn - job.processedOn) : null;
   
-  // Parse job.data from JSON string
-  const jobData: Record<string, unknown> = (() => {
-    try {
-      return typeof job.data === "string" ? JSON.parse(job.data) : {};
-    } catch {
-      return {};
-    }
-  })();
+  const jobData = parseJobData(job.data);
   
   const instruction = typeof jobData.instruction === "string" ? jobData.instruction : null;
   

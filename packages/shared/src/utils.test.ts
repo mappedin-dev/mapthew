@@ -1,5 +1,13 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, beforeEach, vi } from "vitest";
 import {
+  isValidBotName,
+  isValidJiraUrl,
+  getBotName,
+  setBotName,
+  getBotDisplayName,
+  getTriggerPattern,
+  getQueueName,
+  getBranchPrefix,
   isJiraJob,
   isGitHubJob,
   isAdminJob,
@@ -8,6 +16,7 @@ import {
   isGitHubPRCommentEvent,
   isGitHubIssueCommentEvent,
   extractIssueKeyFromBranch,
+  parseJobData,
 } from "./utils.js";
 import type {
   JiraJob,
@@ -16,6 +25,164 @@ import type {
   WebhookPayload,
   GitHubWebhookPayload,
 } from "./types.js";
+
+describe("isValidBotName", () => {
+  it("accepts valid lowercase alphanumeric names", () => {
+    expect(isValidBotName("mapthew")).toBe(true);
+    expect(isValidBotName("bot123")).toBe(true);
+    expect(isValidBotName("mybot")).toBe(true);
+  });
+
+  it("accepts names with dashes and underscores", () => {
+    expect(isValidBotName("my-bot")).toBe(true);
+    expect(isValidBotName("my_bot")).toBe(true);
+    expect(isValidBotName("code-bot-123")).toBe(true);
+  });
+
+  it("rejects names starting with dash or underscore", () => {
+    expect(isValidBotName("-bot")).toBe(false);
+    expect(isValidBotName("_bot")).toBe(false);
+  });
+
+  it("rejects uppercase letters", () => {
+    expect(isValidBotName("MyBot")).toBe(false);
+    expect(isValidBotName("MAPTHEW")).toBe(false);
+  });
+
+  it("rejects special characters", () => {
+    expect(isValidBotName("bot@name")).toBe(false);
+    expect(isValidBotName("bot.name")).toBe(false);
+    expect(isValidBotName("bot name")).toBe(false);
+  });
+
+  it("rejects empty string", () => {
+    expect(isValidBotName("")).toBe(false);
+  });
+
+  it("rejects names longer than 32 characters", () => {
+    expect(isValidBotName("a".repeat(32))).toBe(true);
+    expect(isValidBotName("a".repeat(33))).toBe(false);
+  });
+});
+
+describe("isValidJiraUrl", () => {
+  it("accepts valid HTTPS URLs", () => {
+    expect(isValidJiraUrl("https://company.atlassian.net")).toBe(true);
+    expect(isValidJiraUrl("https://jira.example.com")).toBe(true);
+  });
+
+  it("accepts empty string (not configured)", () => {
+    expect(isValidJiraUrl("")).toBe(true);
+  });
+
+  it("rejects HTTP URLs", () => {
+    expect(isValidJiraUrl("http://company.atlassian.net")).toBe(false);
+  });
+
+  it("rejects invalid URLs", () => {
+    expect(isValidJiraUrl("not-a-url")).toBe(false);
+    expect(isValidJiraUrl("company.atlassian.net")).toBe(false);
+  });
+});
+
+describe("getBotName and setBotName", () => {
+  beforeEach(() => {
+    vi.unstubAllEnvs();
+    // Reset to known state
+    setBotName("mapthew");
+  });
+
+  it("returns the name set by setBotName", () => {
+    setBotName("testbot");
+    expect(getBotName()).toBe("testbot");
+  });
+
+  it("throws error for invalid bot name", () => {
+    expect(() => setBotName("Invalid-Name")).toThrow();
+    expect(() => setBotName("")).toThrow();
+    expect(() => setBotName("-invalid")).toThrow();
+  });
+
+  it("preserves valid name after failed setBotName attempt", () => {
+    setBotName("validbot");
+    expect(() => setBotName("Invalid-Name")).toThrow();
+    // Should still have the previous valid name
+    expect(getBotName()).toBe("validbot");
+  });
+});
+
+describe("getBotDisplayName", () => {
+  beforeEach(() => {
+    setBotName("mapthew");
+  });
+
+  it("capitalizes first letter", () => {
+    setBotName("mapthew");
+    expect(getBotDisplayName()).toBe("Mapthew");
+  });
+
+  it("handles names with dashes", () => {
+    setBotName("code-bot");
+    expect(getBotDisplayName()).toBe("Code-bot");
+  });
+
+  it("handles single character name", () => {
+    setBotName("a");
+    expect(getBotDisplayName()).toBe("A");
+  });
+});
+
+describe("getTriggerPattern", () => {
+  beforeEach(() => {
+    setBotName("mapthew");
+  });
+
+  it("creates regex for default bot name", () => {
+    setBotName("mapthew");
+    const pattern = getTriggerPattern();
+    expect(pattern.test("@mapthew do something")).toBe(true);
+    expect(pattern.test("@MAPTHEW do something")).toBe(true); // case insensitive
+  });
+
+  it("creates regex for custom bot name", () => {
+    setBotName("testbot");
+    const pattern = getTriggerPattern();
+    expect(pattern.test("@testbot implement this")).toBe(true);
+    expect(pattern.test("@mapthew implement this")).toBe(false);
+  });
+
+  it("captures instruction after trigger", () => {
+    setBotName("mapthew");
+    const pattern = getTriggerPattern();
+    const match = "@mapthew implement auth".match(pattern);
+    expect(match).not.toBeNull();
+    expect(match![1]).toBe("implement auth");
+  });
+});
+
+describe("getQueueName", () => {
+  it("returns queue name based on bot name", () => {
+    setBotName("mapthew");
+    expect(getQueueName()).toBe("mapthew-jobs");
+  });
+
+  it("updates when bot name changes", () => {
+    setBotName("testbot");
+    expect(getQueueName()).toBe("testbot-jobs");
+  });
+});
+
+describe("getBranchPrefix", () => {
+  it("returns branch prefix based on bot name", () => {
+    setBotName("mapthew");
+    expect(getBranchPrefix()).toBe("mapthew-bot");
+  });
+
+  it("updates when bot name changes", () => {
+    setBotName("testbot");
+    expect(getBranchPrefix()).toBe("testbot-bot");
+  });
+});
 
 describe("isJiraJob", () => {
   it("returns true for JiraJob", () => {
@@ -140,6 +307,10 @@ describe("isCommentCreatedEvent", () => {
 });
 
 describe("extractBotInstruction", () => {
+  beforeEach(() => {
+    setBotName("mapthew");
+  });
+
   it("extracts instruction after @mapthew", () => {
     expect(extractBotInstruction("@mapthew implement auth")).toBe(
       "implement auth",
@@ -347,5 +518,27 @@ describe("extractIssueKeyFromBranch", () => {
   it("handles various project key formats", () => {
     expect(extractIssueKeyFromBranch("SDK-1")).toBe("SDK-1");
     expect(extractIssueKeyFromBranch("WEBAPP-12345")).toBe("WEBAPP-12345");
+  });
+});
+
+describe("parseJobData", () => {
+  it("parses a valid JSON string", () => {
+    const data = JSON.stringify({ source: "github", owner: "org", repo: "repo" });
+    expect(parseJobData(data)).toEqual({ source: "github", owner: "org", repo: "repo" });
+  });
+
+  it("returns empty object for invalid JSON string", () => {
+    expect(parseJobData("not valid json")).toEqual({});
+  });
+
+  it("returns empty object for non-string input", () => {
+    expect(parseJobData(null)).toEqual({});
+    expect(parseJobData(undefined)).toEqual({});
+    expect(parseJobData(123)).toEqual({});
+    expect(parseJobData({})).toEqual({});
+  });
+
+  it("returns empty object for empty string", () => {
+    expect(parseJobData("")).toEqual({});
   });
 });

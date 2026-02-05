@@ -20,15 +20,9 @@ AGENTS.md files should be optimized for agents, but remain human readable.
 
 Outline and summarize content so context overhead in minimized.
 
-# Shared Types
+# Shared Package
 
-Use types from `@mapthew/shared` whenever possible:
-
-- API request/response types live in `packages/shared/src/api-types.ts`
-- All types (`JiraJob`, `GitHubJob`, `AdminJob`, `AppConfig`, `ClaudeModel`, etc.) live in `packages/shared/src/types.ts`
-- Runtime utility functions live in `packages/shared/src/utils.ts`
-
-Do not duplicate types across packages. If a type is needed in multiple packages, add it to shared.
+Shared code lives in `@mapthew/shared` subpaths (e.g. `@mapthew/shared/types`, `@mapthew/shared/utils`).
 
 # Claude Code
 

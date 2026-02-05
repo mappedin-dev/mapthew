@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { type SecretsStatus } from "@mapthew/shared";
+import type { SecretsStatus } from "@mapthew/shared/types";
 import {
   JIRA_EMAIL,
   JIRA_API_TOKEN,

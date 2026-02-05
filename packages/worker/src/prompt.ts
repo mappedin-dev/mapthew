@@ -1,14 +1,8 @@
 import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
-import {
-  type Job,
-  isGitHubJob,
-  isJiraJob,
-  isAdminJob,
-  getBotName,
-  getBranchPrefix,
-} from "@mapthew/shared";
+import type { Job } from "@mapthew/shared/types";
+import { isGitHubJob, isJiraJob, isAdminJob, getBotName, getBranchPrefix } from "@mapthew/shared/utils";
 
 // ES module equivalent of __dirname
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
