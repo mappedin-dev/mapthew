@@ -58,16 +58,17 @@ Set `BOT_NAME` to customize the trigger (e.g., `@mybot` instead of `@mapthew`), 
 
 ## Credentials
 
-| Credential                | Purpose                              |
-| ------------------------- | ------------------------------------ |
-| **JIRA API Token**        | Reading tickets and posting comments |
-| **JIRA Webhook Secret**   | Verify webhook signatures            |
-| **GitHub PAT**            | `repo` and `workflow` scopes         |
-| **GitHub Webhook Secret** | Verify GitHub webhook signatures     |
-| **Anthropic API Key**     | Claude Code CLI                      |
-| **Auth0 Domain**          | Auth0 tenant for dashboard auth      |
-| **Auth0 Client ID**       | Dashboard SPA client ID              |
-| **Auth0 Audience**        | API identifier for JWT validation    |
+| Credential                | Purpose                              | Permissions / Scopes                                                                                                                                                   |
+| ------------------------- | ------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **JIRA API Token**        | Reading tickets and posting comments | Read tickets, write comments                                                                                                                                           |
+| **JIRA Webhook Secret**   | Verify webhook signatures            | —                                                                                                                                                                      |
+| **GitHub PAT**            | Git CLI + GitHub MCP                 | `repo`, `workflow`                                                                                                                                                     |
+| **GitHub Webhook Secret** | Verify GitHub webhook signatures     | —                                                                                                                                                                      |
+| **Figma API Key**         | Fetching design data from Figma      | `file_content:read`, `file_comments:read`, `file_metadata:read`, `library_assets:read`, `team_library_content:read`, `library_content:read`, `file_dev_resources:read` |
+| **Anthropic API Key**     | Claude Code CLI                      | —                                                                                                                                                                      |
+| **Auth0 Domain**          | Auth0 tenant for dashboard auth      | —                                                                                                                                                                      |
+| **Auth0 Client ID**       | Dashboard SPA client ID              | —                                                                                                                                                                      |
+| **Auth0 Audience**        | API identifier for JWT validation    | —                                                                                                                                                                      |
 
 ## Webhooks
 
@@ -167,10 +168,11 @@ The webhook server will be accessible at the tunnel hostname.
 
 ## MCP Integration Tests
 
-To test the MCP servers locally, install the JIRA MCP server:
+To test the MCP servers locally, install the JIRA and Figma MCP servers:
 
 ```bash
 pipx install mcp-atlassian
+npm install -g figma-developer-mcp
 ```
 
 The GitHub MCP test uses a remote hosted endpoint and requires no local installation.

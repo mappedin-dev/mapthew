@@ -2,6 +2,7 @@ import { useTranslation } from "react-i18next";
 import type { SecretsStatus } from "@mapthew/shared/api-types";
 import { JiraLogo } from "./JiraLogo";
 import { GitHubLogo } from "./GitHubLogo";
+import { FigmaLogo } from "./FigmaLogo";
 import { Tooltip } from "./Tooltip";
 
 interface IntegrationsCardProps {
@@ -121,6 +122,20 @@ export function IntegrationsCard({
           <SecretField
             label={t("settings.integrations.github.webhookSecret")}
             value={secrets.github.webhookSecretMasked}
+          />
+        </div>
+      </div>
+
+      {/* Figma Section */}
+      <div className="bg-dark-800/50 border border-dark-700 rounded-lg p-4">
+        <h3 className="text-sm font-medium text-dark-200 mb-3 flex items-center gap-2">
+          <FigmaLogo className="w-4 h-4" />
+          {t("settings.integrations.figma.title")}
+        </h3>
+        <div className="space-y-1">
+          <SecretField
+            label={t("settings.integrations.figma.apiKey")}
+            value={secrets.figma.apiKeyMasked}
           />
         </div>
       </div>

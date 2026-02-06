@@ -3,7 +3,7 @@
 # ============================================
 FROM node:22-alpine AS base
 RUN apk add --no-cache git bash python3 py3-pip curl
-RUN npm install -g pnpm @anthropic-ai/claude-code
+RUN npm install -g pnpm @anthropic-ai/claude-code figma-developer-mcp
 RUN pip3 install --break-system-packages mcp-atlassian
 
 # Install GitHub's official MCP server (Go binary)

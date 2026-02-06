@@ -18,6 +18,7 @@
     "mcp-test": "pnpm mcp integration",
     "mcp-test:github": "pnpm mcp integration:github",
     "mcp-test:jira": "pnpm mcp integration:jira",
+    "mcp-test:figma": "pnpm mcp integration:figma",
     "tunnel": "cloudflared tunnel --config cloudflare-tunnel-config.yml run",
     "requests:init": "bash scripts/sign-webhook.sh"
   },

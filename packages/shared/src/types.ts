@@ -172,6 +172,9 @@ export interface SecretsStatus {
     tokenMasked: string;
     webhookSecretMasked: string;
   };
+  figma: {
+    apiKeyMasked: string;
+  };
 }
 
 /**

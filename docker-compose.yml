@@ -48,6 +48,7 @@ services:
       - JIRA_API_TOKEN
       - JIRA_WEBHOOK_SECRET
       - GITHUB_WEBHOOK_SECRET
+      - FIGMA_API_KEY
     env_file: .env
     depends_on:
       - redis
@@ -71,6 +72,7 @@ services:
       - JIRA_EMAIL
       - JIRA_API_TOKEN
       - GITHUB_TOKEN
+      - FIGMA_API_KEY
       - ANTHROPIC_API_KEY
       - CLAUDE_MODEL
     env_file: .env

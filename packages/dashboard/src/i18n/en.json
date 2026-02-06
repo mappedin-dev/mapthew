@@ -107,6 +107,10 @@
         "token": "Access Token",
         "webhookSecret": "Webhook Secret"
       },
+      "figma": {
+        "title": "Figma",
+        "apiKey": "API Key"
+      },
       "notConfigured": "Not configured",
       "notEditable": "Must be set as an environment variable"
     },

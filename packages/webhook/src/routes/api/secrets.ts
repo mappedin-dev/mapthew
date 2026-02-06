@@ -6,6 +6,7 @@ import {
   JIRA_WEBHOOK_SECRET,
   GITHUB_TOKEN,
   GITHUB_WEBHOOK_SECRET,
+  FIGMA_API_KEY,
 } from "../../config.js";
 
 const router: Router = Router();
@@ -34,6 +35,9 @@ router.get("/", (_req, res) => {
     github: {
       tokenMasked: maskSecret(GITHUB_TOKEN),
       webhookSecretMasked: maskSecret(GITHUB_WEBHOOK_SECRET),
+    },
+    figma: {
+      apiKeyMasked: maskSecret(FIGMA_API_KEY),
     },
   };
   res.json(secrets);

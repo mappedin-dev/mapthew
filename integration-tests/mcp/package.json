@@ -6,7 +6,8 @@
   "scripts": {
     "integration": "tsx index.ts",
     "integration:github": "tsx index.ts --github",
-    "integration:jira": "tsx index.ts --jira"
+    "integration:jira": "tsx index.ts --jira",
+    "integration:figma": "tsx index.ts --figma"
   },
   "devDependencies": {
     "@types/node": "^22.0.0",
