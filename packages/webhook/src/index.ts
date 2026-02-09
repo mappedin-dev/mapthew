@@ -45,7 +45,7 @@ app.use(
 app.use("/api", jwtCheck, requireAdminPermission, apiRoutes);
 app.use("/webhook/jira", jiraRoutes);
 app.use("/webhook/github", githubRoutes);
-app.use("/api/sessions", sessionsRoutes);
+app.use("/api/sessions", jwtCheck, requireAdminPermission, sessionsRoutes);
 
 // Health check
 app.get("/health", (_req, res) => {
