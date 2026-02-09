@@ -38,7 +38,6 @@ function getGitHubContext(job: Job) {
       repo: job.repo,
       prNumber: job.prNumber ? String(job.prNumber) : undefined,
       issueNumber: job.issueNumber ? String(job.issueNumber) : undefined,
-      branchId: job.branchId,
     };
   }
   if (isAdminJob(job)) {
@@ -47,7 +46,6 @@ function getGitHubContext(job: Job) {
       repo: job.githubRepo,
       prNumber: job.githubPrNumber ? String(job.githubPrNumber) : undefined,
       issueNumber: job.githubIssueNumber ? String(job.githubIssueNumber) : undefined,
-      branchId: job.githubBranchId,
     };
   }
   return {};
@@ -93,7 +91,6 @@ export function buildPrompt(job: Job): string {
     "github.owner": github.owner ?? "unknown",
     "github.repo": github.repo ?? "unknown",
     "github.prNumber": github.prNumber ?? "unknown",
-    "github.branchId": github.branchId ?? "unknown",
     // JIRA
     "jira.issueKey": jira.issueKey ?? "unknown",
     "jira.boardId": jira.boardId ?? "unknown",

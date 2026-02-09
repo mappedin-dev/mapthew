@@ -44,9 +44,28 @@ export interface GitHubJob extends BaseJob {
   repo: string;
   prNumber?: number;
   issueNumber?: number;
-  branchId?: string;
   /** PR branch name (used to extract Jira issue key for session linking) */
   branchName?: string;
+}
+
+/**
+ * GitHub PR webhook payload (used for merge/close events)
+ */
+export interface GitHubPRPayload {
+  action: string;
+  pull_request: {
+    number: number;
+    merged: boolean;
+    head: {
+      ref: string; // branch name
+    };
+  };
+  repository: {
+    name: string;
+    owner: {
+      login: string;
+    };
+  };
 }
 
 /**

@@ -84,19 +84,18 @@ describe("buildPrompt", () => {
       expect(prompt).toContain("repo");
     });
 
-    it("includes branch ID when provided", () => {
+    it("includes PR number when provided", () => {
       const job: GitHubJob = {
         source: "github",
         owner: "org",
         repo: "repo",
         prNumber: 5,
-        branchId: "feature/my-branch",
         instruction: "update code",
         triggeredBy: "dev",
       };
 
       const prompt = buildPrompt(job);
-      expect(prompt).toContain("feature/my-branch");
+      expect(prompt).toContain("5");
     });
   });
 
@@ -124,7 +123,6 @@ describe("buildPrompt", () => {
         githubOwner: "company",
         githubRepo: "codebase",
         githubPrNumber: 50,
-        githubBranchId: "admin-branch",
       };
 
       const prompt = buildPrompt(job);
@@ -134,7 +132,6 @@ describe("buildPrompt", () => {
       expect(prompt).toContain("company");
       expect(prompt).toContain("codebase");
       expect(prompt).toContain("50");
-      expect(prompt).toContain("admin-branch");
     });
   });
 

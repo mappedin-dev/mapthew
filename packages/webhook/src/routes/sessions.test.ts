@@ -9,7 +9,6 @@ const mockQueue = vi.hoisted(() => ({
 
 const mockWorkspace = vi.hoisted(() => ({
   listSessions: vi.fn().mockResolvedValue([]),
-  getSessionCount: vi.fn().mockResolvedValue(0),
   getMaxSessions: vi.fn().mockReturnValue(5),
   getWorkspacesDir: vi.fn().mockReturnValue("/tmp/test-workspaces"),
 }));
@@ -74,7 +73,6 @@ describe("Sessions routes", () => {
     vi.clearAllMocks();
     // Reset to default values
     mockWorkspace.listSessions.mockResolvedValue([]);
-    mockWorkspace.getSessionCount.mockResolvedValue(0);
     mockWorkspace.getMaxSessions.mockReturnValue(5);
     mockWorkspace.getWorkspacesDir.mockReturnValue("/tmp/test-workspaces");
   });
@@ -134,7 +132,6 @@ describe("Sessions routes", () => {
           sizeBytes: 1048576,
         },
       ]);
-      mockWorkspace.getSessionCount.mockResolvedValue(1);
       mockWorkspace.getMaxSessions.mockReturnValue(5);
 
       const app = createAppWithoutAuth();
@@ -187,7 +184,6 @@ describe("Sessions routes", () => {
         { hasSession: false, sizeBytes: 500 },
         { hasSession: true, sizeBytes: 2000 },
       ]);
-      mockWorkspace.getSessionCount.mockResolvedValue(2);
       mockWorkspace.getMaxSessions.mockReturnValue(5);
 
       const app = createAppWithoutAuth();

@@ -15,10 +15,20 @@ export interface SessionInfo {
 }
 
 /**
- * Get the workspaces directory path (reads from env at runtime)
+ * Get the workspaces directory path.
+ * Cached after first call — the env var is not expected to change at runtime.
  */
+let _workspacesDir: string | null = null;
 export function getWorkspacesDir(): string {
-  return process.env.WORKSPACES_DIR || `/tmp/${getBotName()}-workspaces`;
+  if (_workspacesDir === null) {
+    _workspacesDir = process.env.WORKSPACES_DIR || `/tmp/${getBotName()}-workspaces`;
+  }
+  return _workspacesDir;
+}
+
+/** @internal Reset cached workspaces dir (for testing only) */
+export function _resetWorkspacesDirCache(): void {
+  _workspacesDir = null;
 }
 
 /**

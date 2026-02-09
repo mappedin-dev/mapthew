@@ -14,6 +14,7 @@ import {
   getWorkspacesDir,
   getMaxSessions,
   getClaudeSessionDir,
+  _resetWorkspacesDirCache,
 } from "./workspace.js";
 
 // Use a unique test directory for each test run
@@ -43,6 +44,9 @@ describe("workspace", () => {
     process.env.WORKSPACES_DIR = testWorkspacesDir;
     process.env.MAX_SESSIONS = "3";
     process.env.HOME = testHomeDir;
+
+    // Reset cached workspaces dir so it picks up the new env var
+    _resetWorkspacesDirCache();
   });
 
   afterEach(async () => {
@@ -70,6 +74,9 @@ describe("workspace", () => {
     } else {
       delete process.env.HOME;
     }
+
+    // Reset cached workspaces dir to avoid leaking between tests
+    _resetWorkspacesDirCache();
   });
 
   describe("getWorkspacesDir", () => {

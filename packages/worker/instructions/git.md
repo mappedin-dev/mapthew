@@ -10,5 +10,4 @@
 ## Branch Management
 
 - When working on an existing PR, checkout that PR's branch directly
-- When a specific branch is provided ({{github.branchId}}), checkout that branch
 - When working on an issue or new feature, create a new branch with a descriptive name

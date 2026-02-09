@@ -1,7 +1,6 @@
 import { Router } from "express";
 import {
   listSessions,
-  getSessionCount,
   getMaxSessions,
   getWorkspacesDir,
   type SessionInfo,
@@ -19,7 +18,8 @@ const router: Router = Router();
 router.get("/", async (_req, res) => {
   try {
     const sessions = await listSessions();
-    const count = await getSessionCount();
+    const activeSessions = sessions.filter((s: SessionInfo) => s.hasSession);
+    const count = activeSessions.length;
     const max = getMaxSessions();
 
     res.json({
@@ -49,10 +49,10 @@ router.get("/", async (_req, res) => {
 router.get("/stats", async (_req, res) => {
   try {
     const sessions = await listSessions();
-    const count = await getSessionCount();
     const max = getMaxSessions();
 
     const activeSessions = sessions.filter((s: SessionInfo) => s.hasSession);
+    const count = activeSessions.length;
     const totalSize = activeSessions.reduce((sum: number, s: SessionInfo) => sum + s.sizeBytes, 0);
 
     res.json({

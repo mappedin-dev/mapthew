@@ -5,7 +5,6 @@
 ## Current Context
 
 - Repository: **{{github.owner}}/{{github.repo}}**
-- Branch: **{{github.branchId}}**
 - PR Number: #{{github.prNumber}}
 - Triggered by: **{{triggeredBy}}**
 - Instruction: {{instruction}}
