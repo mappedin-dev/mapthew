@@ -4,8 +4,8 @@
 # Run: pnpm requests:init to compute and populate the signature in .env
 
 @baseUrl = http://localhost:3000
-@tunnelUrl = https://darrenchay.mappedin.io
-@ticketKey = MPTW-11
+@tunnelUrl = https://ben.mappedin.io
+@ticketKey = MPTW-1
 @botName = mapthew
 @jiraSignature = {{$dotenv REQUESTS_HTTP_JIRA_WEBHOOK_SIGNATURE}}
 
@@ -47,16 +47,3 @@ X-Hub-Signature-256: sha256={{jiraSignature}}
   },
   "issue": { "key": "{{ticketKey}}" }
 }
-
-###############################################
-# Sessions API
-###############################################
-
-### List all sessions
-GET {{baseUrl}}/api/sessions
-
-### Get session stats
-GET {{baseUrl}}/api/sessions/stats
-
-### Delete a specific session
-DELETE {{baseUrl}}/api/sessions/DXTR-123
