@@ -2,8 +2,8 @@ import { Router } from "express";
 import type {
   GitHubJob,
   GitHubWebhookPayload,
-  GitHubReviewCommentPayload,
   GitHubPRPayload,
+  GitHubReviewCommentPayload,
   SessionCleanupJob,
 } from "@mapthew/shared/types";
 import {
