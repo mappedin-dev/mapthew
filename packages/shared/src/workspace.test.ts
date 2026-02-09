@@ -13,6 +13,7 @@ import {
   getOldestSession,
   getWorkspacesDir,
   getMaxSessions,
+  getClaudeSessionDir,
 } from "./workspace.js";
 
 // Use a unique test directory for each test run
@@ -124,6 +125,16 @@ describe("workspace", () => {
     });
   });
 
+  /**
+   * Helper: create a Claude session directory for a workspace.
+   * Mirrors getClaudeSessionDir logic (uses ~/.claude/projects/{encoded-path}).
+   */
+  async function createClaudeSession(workDir: string): Promise<string> {
+    const sessionDir = getClaudeSessionDir(workDir);
+    await fs.mkdir(sessionDir, { recursive: true });
+    return sessionDir;
+  }
+
   describe("hasExistingSession", () => {
     // Helper to get the Claude session path for a workspace
     function getClaudeSessionPath(workDir: string): string {
@@ -176,12 +187,23 @@ describe("workspace", () => {
     it("removes the workspace directory", async () => {
       const issueKey = "CLEANUP-123";
       const workDir = path.join(testWorkspacesDir, issueKey);
-      await fs.mkdir(path.join(workDir, ".claude"), { recursive: true });
+      await fs.mkdir(workDir, { recursive: true });
       await fs.writeFile(path.join(workDir, "test.txt"), "test");
 
       await cleanupWorkspace(issueKey);
 
       await expect(fs.stat(workDir)).rejects.toThrow();
+    });
+
+    it("removes the Claude session directory", async () => {
+      const issueKey = "CLEANUP-456";
+      const workDir = path.join(testWorkspacesDir, issueKey);
+      await fs.mkdir(workDir, { recursive: true });
+      const sessionDir = await createClaudeSession(workDir);
+
+      await cleanupWorkspace(issueKey);
+
+      await expect(fs.stat(sessionDir)).rejects.toThrow();
     });
 
     it("does not throw when workspace does not exist", async () => {
@@ -194,22 +216,26 @@ describe("workspace", () => {
       expect(await getSessionCount()).toBe(0);
     });
 
-    it("returns 0 when workspaces exist but have no .claude directories", async () => {
+    it("returns 0 when workspaces exist but have no Claude sessions", async () => {
       await fs.mkdir(path.join(testWorkspacesDir, "WS-1"), { recursive: true });
       await fs.mkdir(path.join(testWorkspacesDir, "WS-2"), { recursive: true });
 
       expect(await getSessionCount()).toBe(0);
     });
 
-    it("counts only workspaces with .claude directories", async () => {
-      // Create 3 workspaces, 2 with sessions
-      await fs.mkdir(path.join(testWorkspacesDir, "WS-1", ".claude"), {
-        recursive: true,
-      });
-      await fs.mkdir(path.join(testWorkspacesDir, "WS-2"), { recursive: true });
-      await fs.mkdir(path.join(testWorkspacesDir, "WS-3", ".claude"), {
-        recursive: true,
-      });
+    it("counts only workspaces with Claude session directories", async () => {
+      // Create 3 workspaces, 2 with Claude sessions in ~/.claude/projects/
+      const ws1 = path.join(testWorkspacesDir, "WS-1");
+      const ws2 = path.join(testWorkspacesDir, "WS-2");
+      const ws3 = path.join(testWorkspacesDir, "WS-3");
+
+      await fs.mkdir(ws1, { recursive: true });
+      await fs.mkdir(ws2, { recursive: true });
+      await fs.mkdir(ws3, { recursive: true });
+
+      await createClaudeSession(ws1);
+      // ws2 has no session
+      await createClaudeSession(ws3);
 
       expect(await getSessionCount()).toBe(2);
     });
@@ -222,28 +248,32 @@ describe("workspace", () => {
     });
 
     it("returns false when at the limit", async () => {
-      // Create 3 sessions (at limit)
-      await fs.mkdir(path.join(testWorkspacesDir, "WS-1", ".claude"), {
-        recursive: true,
-      });
-      await fs.mkdir(path.join(testWorkspacesDir, "WS-2", ".claude"), {
-        recursive: true,
-      });
-      await fs.mkdir(path.join(testWorkspacesDir, "WS-3", ".claude"), {
-        recursive: true,
-      });
+      // Create 3 workspaces with Claude sessions (at limit)
+      const ws1 = path.join(testWorkspacesDir, "WS-1");
+      const ws2 = path.join(testWorkspacesDir, "WS-2");
+      const ws3 = path.join(testWorkspacesDir, "WS-3");
+
+      await fs.mkdir(ws1, { recursive: true });
+      await fs.mkdir(ws2, { recursive: true });
+      await fs.mkdir(ws3, { recursive: true });
+
+      await createClaudeSession(ws1);
+      await createClaudeSession(ws2);
+      await createClaudeSession(ws3);
 
       expect(await canCreateSession()).toBe(false);
     });
 
     it("returns true when sessions exist but under limit", async () => {
-      // Create 2 sessions (under limit of 3)
-      await fs.mkdir(path.join(testWorkspacesDir, "WS-1", ".claude"), {
-        recursive: true,
-      });
-      await fs.mkdir(path.join(testWorkspacesDir, "WS-2", ".claude"), {
-        recursive: true,
-      });
+      // Create 2 workspaces with Claude sessions (under limit of 3)
+      const ws1 = path.join(testWorkspacesDir, "WS-1");
+      const ws2 = path.join(testWorkspacesDir, "WS-2");
+
+      await fs.mkdir(ws1, { recursive: true });
+      await fs.mkdir(ws2, { recursive: true });
+
+      await createClaudeSession(ws1);
+      await createClaudeSession(ws2);
 
       expect(await canCreateSession()).toBe(true);
     });
@@ -260,8 +290,11 @@ describe("workspace", () => {
       const ws1 = path.join(testWorkspacesDir, "DXTR-1");
       const ws2 = path.join(testWorkspacesDir, "DXTR-2");
 
-      await fs.mkdir(path.join(ws1, ".claude"), { recursive: true });
+      await fs.mkdir(ws1, { recursive: true });
       await fs.mkdir(ws2, { recursive: true });
+
+      // ws1 has a Claude session, ws2 does not
+      await createClaudeSession(ws1);
 
       // Write marker files
       await fs.writeFile(
@@ -287,10 +320,11 @@ describe("workspace", () => {
 
     it("includes size information for sessions", async () => {
       const ws = path.join(testWorkspacesDir, "DXTR-SIZE");
-      const claudeDir = path.join(ws, ".claude");
+      await fs.mkdir(ws, { recursive: true });
 
-      await fs.mkdir(claudeDir, { recursive: true });
-      await fs.writeFile(path.join(claudeDir, "session.jsonl"), "x".repeat(1000));
+      // Create Claude session and add a file to it
+      const sessionDir = await createClaudeSession(ws);
+      await fs.writeFile(path.join(sessionDir, "session.jsonl"), "x".repeat(1000));
 
       const sessions = await listSessions();
 
@@ -309,12 +343,15 @@ describe("workspace", () => {
     });
 
     it("returns the least recently used session", async () => {
-      // Create sessions with different timestamps
+      // Create workspaces with Claude sessions and different timestamps
       const ws1 = path.join(testWorkspacesDir, "OLD-1");
       const ws2 = path.join(testWorkspacesDir, "NEW-1");
 
-      await fs.mkdir(path.join(ws1, ".claude"), { recursive: true });
-      await fs.mkdir(path.join(ws2, ".claude"), { recursive: true });
+      await fs.mkdir(ws1, { recursive: true });
+      await fs.mkdir(ws2, { recursive: true });
+
+      await createClaudeSession(ws1);
+      await createClaudeSession(ws2);
 
       // Set timestamps
       await fs.writeFile(

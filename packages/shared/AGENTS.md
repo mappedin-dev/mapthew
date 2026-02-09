@@ -11,3 +11,13 @@ Avoid barrel files. To export code from a new file, add a new entry point in the
 `src/config.ts` contains code that instantiates `ioredis`.
 
 Front end packages should avoid importing from this file. Any code needed by front end packages should not be put in this file.
+
+## Workspace
+
+`src/workspace.ts` manages persistent workspaces and Claude session tracking.
+
+- Workspaces live at `WORKSPACES_DIR/{issueKey}` (default `/tmp/{botName}-workspaces/{issueKey}`)
+- Claude CLI sessions live at `~/.claude/projects/{encoded-path}` (path with `/` replaced by `-`)
+- `getSessionCount()` counts workspaces that have a matching Claude session directory
+- `cleanupWorkspace()` removes both the workspace dir and the Claude session dir
+- `MAX_SESSIONS` limits concurrent sessions; `waitForSessionSlot()` polls until a slot opens

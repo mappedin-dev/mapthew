@@ -157,7 +157,7 @@ sequenceDiagram
     Claude->>JIRA_MCP: Post PR link as comment
 
     Claude-->>W: Done
-    W->>W: Cleanup workspace
+    Note over W: Workspace persisted for<br/>session reuse on follow-ups
 ```
 
 ### GitHub-Triggered Job (Update PR)
@@ -197,7 +197,7 @@ sequenceDiagram
     Claude->>GH_MCP: Post summary comment on PR
 
     Claude-->>W: Done
-    W->>W: Cleanup workspace
+    Note over W: Session resumed via --continue,<br/>workspace persisted
 ```
 
 ### Admin-Triggered Job (Manual)
@@ -220,7 +220,7 @@ sequenceDiagram
     W->>Claude: Execute with instruction
     Claude->>Claude: Execute task based on instruction
     Claude-->>W: Done
-    W->>W: Cleanup workspace
+    Note over W: Workspace persisted
 
     Note over Admin: Job status visible on dashboard
 ```
@@ -245,6 +245,53 @@ Admin jobs are created directly from the dashboard without external triggers. Th
 
 ---
 
+## Session Management
+
+The worker uses **persistent workspaces** to reuse Claude CLI sessions across jobs for the same issue. This avoids redundant context fetching (JIRA tickets, codebases) on follow-up jobs.
+
+```mermaid
+flowchart TD
+    subgraph Storage
+        WORKSPACES["/tmp/mapthew-workspaces/{issueKey}"]
+        CLAUDE_SESSIONS["~/.claude/projects/{encoded-path}"]
+    end
+
+    subgraph Lifecycle
+        CREATE["getOrCreateWorkspace()"]
+        RESUME["hasExistingSession() → --continue"]
+        CLEANUP["cleanupWorkspace()"]
+    end
+
+    CREATE -->|"creates"| WORKSPACES
+    RESUME -->|"checks"| CLAUDE_SESSIONS
+    CLEANUP -->|"removes both"| WORKSPACES
+    CLEANUP -->|"removes both"| CLAUDE_SESSIONS
+```
+
+### Key Concepts
+
+- **Workspace**: A directory at `WORKSPACES_DIR/{issueKey}` used as the working directory for Claude CLI. Persists across jobs.
+- **Claude session**: Claude CLI stores conversation history in `~/.claude/projects/{encoded-path}`. The `--continue` flag resumes the most recent conversation.
+- **Session counting**: Only workspaces with a matching Claude session directory count toward `MAX_SESSIONS`.
+- **Cleanup triggers**: Sessions are cleaned up on PR merge (via GitHub webhook) or manually (via the sessions API).
+
+### Environment Variables
+
+| Variable                   | Purpose                        | Default                        |
+| -------------------------- | ------------------------------ | ------------------------------ |
+| `WORKSPACES_DIR`           | Root directory for workspaces  | `/tmp/{botName}-workspaces`    |
+| `MAX_SESSIONS`             | Max concurrent sessions        | `5`                            |
+| `SESSION_POLL_INTERVAL_MS` | Polling interval when at limit | `5000`                         |
+
+### Docker Volumes
+
+| Volume               | Mount Point                    | Purpose                        |
+| -------------------- | ------------------------------ | ------------------------------ |
+| `mapthew-workspaces` | `/tmp/mapthew-workspaces`      | Workspace directories          |
+| `claude-sessions`    | `/home/worker/.claude`         | Claude CLI session data        |
+
+---
+
 ## Admin Dashboard
 
 The webhook server serves a custom React dashboard at `/admin` for monitoring and configuration.
@@ -261,6 +308,7 @@ flowchart LR
         STATIC["/admin — Static Files"]
         API_Q["/api/queues — Queue Status"]
         API_C["/api/config — Configuration"]
+        API_S["/api/sessions — Session Management"]
     end
 
     subgraph Storage
@@ -269,8 +317,10 @@ flowchart LR
 
     UI -->|fetch| API_Q
     UI -->|fetch| API_C
+    UI -->|fetch| API_S
     API_Q -->|read jobs| REDIS
     API_C -->|read/write| REDIS
+    API_S -->|read/cleanup| WORKSPACES[("Workspaces")]
     STATIC -->|serves| UI
 ```
 

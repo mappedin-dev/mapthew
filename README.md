@@ -50,9 +50,12 @@ Use Mapthew to update an open PR in GitHub.
 
 ## Configuration
 
-| Variable     | Purpose                                           | Default   |
-| ------------ | ------------------------------------------------- | --------- |
-| **BOT_NAME** | Bot name used for triggers, branches, queue names | `mapthew` |
+| Variable                     | Purpose                                           | Default                      |
+| ---------------------------- | ------------------------------------------------- | ---------------------------- |
+| **BOT_NAME**                 | Bot name used for triggers, branches, queue names | `mapthew`                    |
+| **WORKSPACES_DIR**           | Root directory for persistent workspaces          | `/tmp/{botName}-workspaces`  |
+| **MAX_SESSIONS**             | Maximum concurrent Claude sessions                | `5`                          |
+| **SESSION_POLL_INTERVAL_MS** | Polling interval when waiting for a session slot  | `5000`                       |
 
 Set `BOT_NAME` to customize the trigger (e.g., `@mybot` instead of `@mapthew`), branch prefix, and internal identifiers.
 

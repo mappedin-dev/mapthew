@@ -69,13 +69,21 @@ function encodeWorkspacePath(workDir: string): string {
 }
 
 /**
+ * Get the Claude session directory path for a given workspace.
+ * Claude Code CLI stores sessions in ~/.claude/projects/{encoded-path}
+ */
+export function getClaudeSessionDir(workDir: string): string {
+  const claudeProjectsDir = path.join(getClaudeHomeDir(), "projects");
+  const encodedPath = encodeWorkspacePath(workDir);
+  return path.join(claudeProjectsDir, encodedPath);
+}
+
+/**
  * Check if a workspace has an existing Claude session
  * Claude Code CLI stores sessions in ~/.claude/projects/{encoded-path}
  */
 export async function hasExistingSession(workDir: string): Promise<boolean> {
-  const claudeProjectsDir = path.join(getClaudeHomeDir(), "projects");
-  const encodedPath = encodeWorkspacePath(workDir);
-  const sessionDir = path.join(claudeProjectsDir, encodedPath);
+  const sessionDir = getClaudeSessionDir(workDir);
 
   try {
     const stat = await fs.stat(sessionDir);
@@ -100,11 +108,25 @@ export async function workspaceExists(issueKey: string): Promise<boolean> {
 }
 
 /**
- * Clean up a workspace by issue key
+ * Clean up a workspace by issue key.
+ * Removes both the workspace directory and the Claude session data.
  */
 export async function cleanupWorkspace(issueKey: string): Promise<void> {
   const workspacesDir = getWorkspacesDir();
   const workDir = path.join(workspacesDir, issueKey);
+
+  // Remove the Claude session data from ~/.claude/projects/
+  const sessionDir = getClaudeSessionDir(workDir);
+  try {
+    await fs.rm(sessionDir, { recursive: true, force: true });
+  } catch (error) {
+    console.warn(
+      `[Session] Failed to cleanup Claude session for ${issueKey}:`,
+      error,
+    );
+  }
+
+  // Remove the workspace directory
   try {
     await fs.rm(workDir, { recursive: true, force: true });
     console.log(`[Session] Cleaned up workspace for ${issueKey}`);
@@ -114,7 +136,9 @@ export async function cleanupWorkspace(issueKey: string): Promise<void> {
 }
 
 /**
- * Get the count of active sessions (workspaces with .claude directories)
+ * Get the count of active sessions.
+ * Counts workspaces that have a corresponding Claude session in
+ * ~/.claude/projects/{encoded-path}.
  */
 export async function getSessionCount(): Promise<number> {
   const workspacesDir = getWorkspacesDir();
@@ -125,14 +149,9 @@ export async function getSessionCount(): Promise<number> {
 
     for (const entry of entries) {
       if (entry.isDirectory()) {
-        const claudeDir = path.join(workspacesDir, entry.name, ".claude");
-        try {
-          const stat = await fs.stat(claudeDir);
-          if (stat.isDirectory()) {
-            count++;
-          }
-        } catch {
-          // No .claude directory, doesn't count as active session
+        const workDir = path.join(workspacesDir, entry.name);
+        if (await hasExistingSession(workDir)) {
+          count++;
         }
       }
     }
@@ -218,13 +237,11 @@ export async function listSessions(): Promise<SessionInfo[]> {
 
       const issueKey = entry.name;
       const workspacePath = path.join(workspacesDir, issueKey);
-      const claudeDir = path.join(workspacePath, ".claude");
       const markerPath = path.join(workspacePath, ".dexter-last-used");
 
       // Get workspace stats
       let createdAt = new Date();
       let lastUsed = new Date();
-      let hasSession = false;
       let sizeBytes = 0;
 
       try {
@@ -247,16 +264,13 @@ export async function listSessions(): Promise<SessionInfo[]> {
         }
       }
 
-      try {
-        const stat = await fs.stat(claudeDir);
-        hasSession = stat.isDirectory();
-      } catch {
-        hasSession = false;
-      }
+      // Check Claude's session dir in ~/.claude/projects/
+      const hasSession = await hasExistingSession(workspacePath);
 
-      // Calculate size (only for .claude dir to keep it fast)
+      // Calculate size from the Claude session dir
       if (hasSession) {
-        sizeBytes = await getDirectorySize(claudeDir);
+        const sessionDir = getClaudeSessionDir(workspacePath);
+        sizeBytes = await getDirectorySize(sessionDir);
       }
 
       sessions.push({
