@@ -196,6 +196,117 @@ describe("GitHub webhook routes", () => {
       expect(mockQueue.add).not.toHaveBeenCalled();
     });
 
+    it("queues job for PR review comment with @mapthew trigger", async () => {
+      const payload = {
+        action: "created",
+        comment: {
+          id: 10,
+          body: "@mapthew cleanup this, i dont need the changes in this file",
+          path: "requests.http",
+          user: { login: "reviewer" },
+        },
+        pull_request: {
+          number: 55,
+          head: { ref: "feature/DXTR-10-context-keeping" },
+        },
+        repository: {
+          name: "dexter",
+          owner: { login: "mappedin-dev" },
+        },
+        sender: { login: "reviewer" },
+      };
+
+      const app = createApp();
+      const res = await request(app)
+        .post("/webhook/github")
+        .set("x-github-event", "pull_request_review_comment")
+        .send(payload);
+
+      expect(res.status).toBe(200);
+      expect(res.body).toMatchObject({
+        status: "queued",
+        number: 55,
+        type: "review-comment",
+      });
+      expect(mockQueue.add).toHaveBeenCalledWith(
+        "process-ticket",
+        expect.objectContaining({
+          source: "github",
+          owner: "mappedin-dev",
+          repo: "dexter",
+          prNumber: 55,
+          instruction: expect.stringContaining("requests.http"),
+          triggeredBy: "reviewer",
+          branchName: "feature/DXTR-10-context-keeping",
+        }),
+        expect.any(Object),
+      );
+      expect(postGitHubComment).toHaveBeenCalled();
+    });
+
+    it("ignores edited review comments", async () => {
+      const payload = {
+        action: "edited",
+        comment: {
+          id: 10,
+          body: "@mapthew do something",
+          path: "file.ts",
+          user: { login: "reviewer" },
+        },
+        pull_request: {
+          number: 55,
+          head: { ref: "feature-branch" },
+        },
+        repository: {
+          name: "repo",
+          owner: { login: "org" },
+        },
+        sender: { login: "reviewer" },
+      };
+
+      const app = createApp();
+      const res = await request(app)
+        .post("/webhook/github")
+        .set("x-github-event", "pull_request_review_comment")
+        .send(payload);
+
+      expect(res.status).toBe(200);
+      expect(res.body.status).toBe("ignored");
+      expect(mockQueue.add).not.toHaveBeenCalled();
+    });
+
+    it("ignores review comments without @mapthew trigger", async () => {
+      const payload = {
+        action: "created",
+        comment: {
+          id: 10,
+          body: "This looks good to me",
+          path: "file.ts",
+          user: { login: "reviewer" },
+        },
+        pull_request: {
+          number: 55,
+          head: { ref: "feature-branch" },
+        },
+        repository: {
+          name: "repo",
+          owner: { login: "org" },
+        },
+        sender: { login: "reviewer" },
+      };
+
+      const app = createApp();
+      const res = await request(app)
+        .post("/webhook/github")
+        .set("x-github-event", "pull_request_review_comment")
+        .send(payload);
+
+      expect(res.status).toBe(200);
+      expect(res.body.status).toBe("ignored");
+      expect(res.body.reason).toContain("no @mapthew trigger found");
+      expect(mockQueue.add).not.toHaveBeenCalled();
+    });
+
     it("ignores comments without @mapthew trigger", async () => {
       const payload = {
         action: "created",

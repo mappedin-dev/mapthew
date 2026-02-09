@@ -151,6 +151,37 @@ export interface GitHubWebhookPayload {
 }
 
 /**
+ * GitHub webhook payload for pull_request_review_comment event
+ * Fired when a comment is made on a file diff in a PR review
+ */
+export interface GitHubReviewCommentPayload {
+  action: string;
+  comment: {
+    id: number;
+    body: string;
+    path: string;
+    user: {
+      login: string;
+    };
+  };
+  pull_request: {
+    number: number;
+    head: {
+      ref: string;
+    };
+  };
+  repository: {
+    name: string;
+    owner: {
+      login: string;
+    };
+  };
+  sender: {
+    login: string;
+  };
+}
+
+/**
  * GET /api/queue response
  */
 export interface QueueStats {

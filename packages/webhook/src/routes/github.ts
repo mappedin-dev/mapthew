@@ -2,6 +2,7 @@ import { Router } from "express";
 import type {
   GitHubJob,
   GitHubWebhookPayload,
+  GitHubReviewCommentPayload,
   SessionCleanupJob,
 } from "@mapthew/shared/types";
 import {
@@ -117,6 +118,79 @@ router.post("/", githubWebhookAuth, async (req, res) => {
         status: "ignored",
         reason: "PR not merged or not closed",
       });
+    }
+
+    // Handle PR review comments (file-level comments on diffs)
+    if (event === "pull_request_review_comment") {
+      const payload = req.body as GitHubReviewCommentPayload;
+
+      if (payload.action !== "created") {
+        if (VERBOSE_LOGS)
+          console.log(
+            `GitHub webhook ignored: review comment action "${payload.action}"`,
+          );
+        return res.status(200).json({
+          status: "ignored",
+          reason: "review comment not created",
+        });
+      }
+
+      const instruction = extractBotInstruction(payload.comment.body);
+      if (!instruction) {
+        if (VERBOSE_LOGS)
+          console.log(
+            `GitHub webhook ignored: no @${getBotName()} trigger in review comment by ${payload.comment.user.login}`,
+          );
+        return res.status(200).json({
+          status: "ignored",
+          reason: `no @${getBotName()} trigger found`,
+        });
+      }
+
+      const { login: owner } = payload.repository.owner;
+      const repo = payload.repository.name;
+      const prNumber = payload.pull_request.number;
+      const branchName = payload.pull_request.head.ref;
+      const filePath = payload.comment.path;
+
+      // Log session linking info
+      const issueKey = extractIssueKeyFromBranch(branchName);
+      if (issueKey) {
+        console.log(
+          `[Session] PR #${prNumber} linked to ${issueKey} via branch: ${branchName}`,
+        );
+      }
+
+      const job: GitHubJob = {
+        instruction: `[Review comment on \`${filePath}\`] ${instruction}`,
+        triggeredBy: payload.comment.user.login,
+        source: "github",
+        owner,
+        repo,
+        prNumber,
+        branchName,
+      };
+
+      await queue.add("process-ticket", job, {
+        attempts: 3,
+        backoff: { type: "exponential", delay: 5000 },
+      });
+
+      console.log(
+        `GitHub Job queued: ${owner}/${repo}#${prNumber} (review comment on ${filePath}) - ${instruction}`,
+      );
+
+      await postGitHubComment(
+        GITHUB_TOKEN,
+        owner,
+        repo,
+        prNumber,
+        "🤓 Okie dokie!",
+      );
+
+      return res
+        .status(200)
+        .json({ status: "queued", number: prNumber, type: "review-comment" });
     }
 
     // Handle issue_comment events
