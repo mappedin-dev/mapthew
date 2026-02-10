@@ -42,8 +42,8 @@ services:
       - ./packages/shared/src:/app/packages/shared/src
       - ./packages/webhook/src:/app/packages/webhook/src
       - dashboard-dist:/app/packages/dashboard/dist:ro
-      - mapthew-workspaces:/tmp/mapthew-workspaces:ro
-      - claude-sessions:/data/claude-sessions:ro
+      - mapthew-workspaces:/tmp/mapthew-workspaces
+      - claude-sessions:/data/claude-sessions
     environment:
       - CLAUDE_CONFIG_DIR=/data/claude-sessions
       - PORT=${WEBHOOK_PORT:-3000}

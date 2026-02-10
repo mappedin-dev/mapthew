@@ -13,8 +13,8 @@ services:
     ports:
       - "3000:3000"
     volumes:
-      - mapthew-workspaces:/tmp/mapthew-workspaces:ro
-      - claude-sessions:/data/claude-sessions:ro
+      - mapthew-workspaces:/tmp/mapthew-workspaces
+      - claude-sessions:/data/claude-sessions
     environment:
       - CLAUDE_CONFIG_DIR=/data/claude-sessions
       - REDIS_URL=redis://redis:6379
