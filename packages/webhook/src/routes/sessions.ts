@@ -92,6 +92,7 @@ router.delete("/:issueKey", async (req, res) => {
 
     await queue.add("session-cleanup", cleanupJob, {
       attempts: 1,
+      priority: 1, // High priority — cleanup frees session slots for waiting jobs
     });
 
     console.log(`[Session] Manual cleanup queued for ${issueKey}`);

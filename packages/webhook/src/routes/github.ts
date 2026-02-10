@@ -50,6 +50,7 @@ async function handlePRMerge(payload: GitHubPRPayload): Promise<void> {
 
   await queue.add("session-cleanup", ghCleanupJob, {
     attempts: 1,
+    priority: 1, // High priority — cleanup frees session slots for waiting jobs
   });
 
   console.log(`[Session] Queued cleanup for ${ghIssueKey}`);
@@ -67,6 +68,7 @@ async function handlePRMerge(payload: GitHubPRPayload): Promise<void> {
 
     await queue.add("session-cleanup", jiraCleanupJob, {
       attempts: 1,
+      priority: 1, // High priority — cleanup frees session slots for waiting jobs
     });
 
     console.log(`[Session] Queued cleanup for ${issueKey}`);
@@ -155,6 +157,7 @@ router.post("/", githubWebhookAuth, async (req, res) => {
       await queue.add("process-ticket", job, {
         attempts: 3,
         backoff: { type: "exponential", delay: 5000 },
+        priority: 10, // Lower than cleanup jobs so they can free slots first
       });
 
       console.log(
@@ -254,6 +257,7 @@ router.post("/", githubWebhookAuth, async (req, res) => {
     await queue.add("process-ticket", job, {
       attempts: 3,
       backoff: { type: "exponential", delay: 5000 },
+      priority: 10, // Lower than cleanup jobs so they can free slots first
     });
 
     const type = isPR ? "PR" : "issue";

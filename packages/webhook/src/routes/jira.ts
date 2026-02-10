@@ -55,6 +55,7 @@ router.post("/", jiraWebhookAuth, async (req, res) => {
     await queue.add("process-ticket", job, {
       attempts: 3,
       backoff: { type: "exponential", delay: 5000 },
+      priority: 10, // Lower than cleanup jobs so they can free slots first
     });
 
     console.log(`Job queued for ${job.issueKey}: ${job.instruction}`);

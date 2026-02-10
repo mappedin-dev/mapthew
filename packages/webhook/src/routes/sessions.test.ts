@@ -229,7 +229,7 @@ describe("Sessions routes", () => {
           issueKey: "DXTR-123",
           reason: "manual",
         },
-        { attempts: 1 },
+        { attempts: 1, priority: 1 },
       );
     });
 
