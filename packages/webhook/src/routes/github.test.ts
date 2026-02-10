@@ -337,5 +337,134 @@ describe("GitHub webhook routes", () => {
       expect(res.body.reason).toContain("no @mapthew trigger found");
       expect(mockQueue.add).not.toHaveBeenCalled();
     });
+
+    // --- PR merge / cleanup tests ---
+
+    it("queues cleanup jobs when a merged PR is closed", async () => {
+      const payload = {
+        action: "closed",
+        pull_request: {
+          number: 99,
+          merged: true,
+          head: { ref: "feature/DXTR-42-add-auth" },
+        },
+        repository: {
+          name: "myrepo",
+          owner: { login: "myorg" },
+        },
+      };
+
+      const app = createApp();
+      const res = await request(app)
+        .post("/webhook/github")
+        .set("x-github-event", "pull_request")
+        .send(payload);
+
+      expect(res.status).toBe(200);
+      expect(res.body).toEqual({ status: "cleanup-queued" });
+
+      // Should queue both a GitHub-based and Jira-based cleanup job
+      expect(mockQueue.add).toHaveBeenCalledTimes(2);
+      expect(mockQueue.add).toHaveBeenCalledWith(
+        "session-cleanup",
+        expect.objectContaining({
+          type: "session-cleanup",
+          issueKey: "gh-myorg-myrepo-99",
+          reason: "pr-merged",
+        }),
+        expect.any(Object),
+      );
+      expect(mockQueue.add).toHaveBeenCalledWith(
+        "session-cleanup",
+        expect.objectContaining({
+          type: "session-cleanup",
+          issueKey: "DXTR-42",
+          reason: "pr-merged",
+        }),
+        expect.any(Object),
+      );
+    });
+
+    it("queues only GitHub cleanup when branch has no Jira key", async () => {
+      const payload = {
+        action: "closed",
+        pull_request: {
+          number: 50,
+          merged: true,
+          head: { ref: "fix-typo-in-readme" },
+        },
+        repository: {
+          name: "project",
+          owner: { login: "org" },
+        },
+      };
+
+      const app = createApp();
+      const res = await request(app)
+        .post("/webhook/github")
+        .set("x-github-event", "pull_request")
+        .send(payload);
+
+      expect(res.status).toBe(200);
+      expect(res.body).toEqual({ status: "cleanup-queued" });
+      expect(mockQueue.add).toHaveBeenCalledTimes(1);
+      expect(mockQueue.add).toHaveBeenCalledWith(
+        "session-cleanup",
+        expect.objectContaining({
+          issueKey: "gh-org-project-50",
+        }),
+        expect.any(Object),
+      );
+    });
+
+    it("ignores closed PRs that were not merged", async () => {
+      const payload = {
+        action: "closed",
+        pull_request: {
+          number: 30,
+          merged: false,
+          head: { ref: "feature/DXTR-10-wip" },
+        },
+        repository: {
+          name: "repo",
+          owner: { login: "org" },
+        },
+      };
+
+      const app = createApp();
+      const res = await request(app)
+        .post("/webhook/github")
+        .set("x-github-event", "pull_request")
+        .send(payload);
+
+      expect(res.status).toBe(200);
+      expect(res.body.status).toBe("ignored");
+      expect(mockQueue.add).not.toHaveBeenCalled();
+    });
+
+    it("ignores opened PR events", async () => {
+      const payload = {
+        action: "opened",
+        pull_request: {
+          number: 10,
+          merged: false,
+          head: { ref: "feature-branch" },
+        },
+        repository: {
+          name: "repo",
+          owner: { login: "org" },
+        },
+      };
+
+      const app = createApp();
+      const res = await request(app)
+        .post("/webhook/github")
+        .set("x-github-event", "pull_request")
+        .send(payload);
+
+      expect(res.status).toBe(200);
+      expect(res.body.status).toBe("ignored");
+      expect(mockQueue.add).not.toHaveBeenCalled();
+    });
   });
 });

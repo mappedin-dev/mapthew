@@ -19,6 +19,40 @@ import { githubWebhookAuth } from "../middleware/index.js";
 
 const router: Router = Router();
 
+const REGULAR_JOB_OPTIONS = {
+  attempts: 3,
+  backoff: { type: "exponential" as const, delay: 5000 },
+  priority: 10, // Lower than cleanup jobs so they can free slots first
+};
+
+const CLEANUP_JOB_OPTIONS = {
+  attempts: 1,
+  priority: 1, // High priority — cleanup frees session slots for waiting jobs
+};
+
+/**
+ * Queue a GitHub job, post an ack comment, and log the action.
+ */
+async function queueGitHubJob(
+  job: GitHubJob,
+  commentNumber: number,
+  logLabel: string,
+): Promise<void> {
+  await queue.add("process-ticket", job, REGULAR_JOB_OPTIONS);
+
+  console.log(
+    `GitHub Job queued: ${job.owner}/${job.repo}#${commentNumber} (${logLabel}) - ${job.instruction}`,
+  );
+
+  await postGitHubComment(
+    GITHUB_TOKEN,
+    job.owner,
+    job.repo,
+    commentNumber,
+    "🤓 Okie dokie!",
+  );
+}
+
 /**
  * Handle PR merge events - cleanup session
  */
@@ -48,10 +82,7 @@ async function handlePRMerge(payload: GitHubPRPayload): Promise<void> {
     prNumber,
   };
 
-  await queue.add("session-cleanup", ghCleanupJob, {
-    attempts: 1,
-    priority: 1, // High priority — cleanup frees session slots for waiting jobs
-  });
+  await queue.add("session-cleanup", ghCleanupJob, CLEANUP_JOB_OPTIONS);
 
   console.log(`[Session] Queued cleanup for ${ghIssueKey}`);
 
@@ -66,10 +97,7 @@ async function handlePRMerge(payload: GitHubPRPayload): Promise<void> {
       prNumber,
     };
 
-    await queue.add("session-cleanup", jiraCleanupJob, {
-      attempts: 1,
-      priority: 1, // High priority — cleanup frees session slots for waiting jobs
-    });
+    await queue.add("session-cleanup", jiraCleanupJob, CLEANUP_JOB_OPTIONS);
 
     console.log(`[Session] Queued cleanup for ${issueKey}`);
   }
@@ -154,23 +182,7 @@ router.post("/", githubWebhookAuth, async (req, res) => {
         branchName,
       };
 
-      await queue.add("process-ticket", job, {
-        attempts: 3,
-        backoff: { type: "exponential", delay: 5000 },
-        priority: 10, // Lower than cleanup jobs so they can free slots first
-      });
-
-      console.log(
-        `GitHub Job queued: ${owner}/${repo}#${prNumber} (review comment on ${filePath}) - ${instruction}`,
-      );
-
-      await postGitHubComment(
-        GITHUB_TOKEN,
-        owner,
-        repo,
-        prNumber,
-        "🤓 Okie dokie!",
-      );
+      await queueGitHubJob(job, prNumber, `review comment on ${filePath}`);
 
       return res
         .status(200)
@@ -230,10 +242,15 @@ router.post("/", githubWebhookAuth, async (req, res) => {
         repo,
         number,
       );
-      branchName = prDetails?.branchName;
 
-      // Log session linking info
-      if (branchName) {
+      if (!prDetails) {
+        console.warn(
+          `[Session] Could not fetch PR details for ${owner}/${repo}#${number} — session linking will be skipped`,
+        );
+      } else {
+        branchName = prDetails.branchName;
+
+        // Log session linking info
         const issueKey = extractIssueKeyFromBranch(branchName);
         if (issueKey) {
           console.log(
@@ -254,24 +271,8 @@ router.post("/", githubWebhookAuth, async (req, res) => {
       branchName,
     };
 
-    await queue.add("process-ticket", job, {
-      attempts: 3,
-      backoff: { type: "exponential", delay: 5000 },
-      priority: 10, // Lower than cleanup jobs so they can free slots first
-    });
-
     const type = isPR ? "PR" : "issue";
-    console.log(
-      `GitHub Job queued: ${owner}/${repo}#${number} (${type}) - ${instruction}`,
-    );
-
-    await postGitHubComment(
-      GITHUB_TOKEN,
-      owner,
-      repo,
-      number,
-      "🤓 Okie dokie!",
-    );
+    await queueGitHubJob(job, number, type);
 
     return res.status(200).json({ status: "queued", number, type });
   } catch (error) {
