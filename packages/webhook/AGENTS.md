@@ -16,9 +16,7 @@ Also serves the dashboard at `/admin` with supporting API routes under `/api/` f
 
 - `GET /` — List all sessions with metadata
 - `GET /stats` — Aggregated session statistics
-- `DELETE /:issueKey` — Queue cleanup for a specific session
-
-The GitHub webhook also handles PR merge events, queueing session cleanup jobs for the merged PR's issue key.
+- `DELETE /:issueKey` — Directly remove a specific session's workspace and Claude data
 
 ## Gotchas
 

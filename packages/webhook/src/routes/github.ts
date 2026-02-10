@@ -36,13 +36,20 @@ async function queueGitHubJob(
     `GitHub Job queued: ${job.owner}/${job.repo}#${commentNumber} (${logLabel}) - ${job.instruction}`,
   );
 
-  await postGitHubComment(
-    GITHUB_TOKEN,
-    job.owner,
-    job.repo,
-    commentNumber,
-    "🤓 Okie dokie!",
-  );
+  try {
+    await postGitHubComment(
+      GITHUB_TOKEN,
+      job.owner,
+      job.repo,
+      commentNumber,
+      "🤓 Okie dokie!",
+    );
+  } catch (error) {
+    console.warn(
+      `Failed to post ack comment on ${job.owner}/${job.repo}#${commentNumber}:`,
+      error,
+    );
+  }
 }
 
 /**

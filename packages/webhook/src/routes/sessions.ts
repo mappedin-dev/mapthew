@@ -2,7 +2,6 @@ import { Router } from "express";
 import {
   listSessions,
   getMaxSessions,
-  getWorkspacesDir,
   getPruneThresholdDays,
   cleanupWorkspace,
   type SessionInfo,
@@ -28,10 +27,8 @@ router.get("/", async (_req, res) => {
       softCap,
       available: Math.max(0, softCap - count),
       pruneThresholdDays,
-      workspacesDir: getWorkspacesDir(),
       sessions: sessions.map((s: SessionInfo) => ({
         issueKey: s.issueKey,
-        workspacePath: s.workspacePath,
         createdAt: s.createdAt.toISOString(),
         lastUsed: s.lastUsed.toISOString(),
         hasSession: s.hasSession,
@@ -64,7 +61,7 @@ router.get("/stats", async (_req, res) => {
       softCap,
       available: Math.max(0, softCap - count),
       pruneThresholdDays,
-      utilizationPercent: Math.round((count / softCap) * 100),
+      utilizationPercent: softCap > 0 ? Math.round((count / softCap) * 100) : 0,
       totalSizeBytes: totalSize,
       totalSizeMB: Math.round((totalSize / 1024 / 1024) * 100) / 100,
     });

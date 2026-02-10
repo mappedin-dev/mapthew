@@ -7,7 +7,6 @@ const mockWorkspace = vi.hoisted(() => ({
   listSessions: vi.fn().mockResolvedValue([]),
   getMaxSessions: vi.fn().mockResolvedValue(5),
   getPruneThresholdDays: vi.fn().mockResolvedValue(7),
-  getWorkspacesDir: vi.fn().mockReturnValue("/tmp/test-workspaces"),
   cleanupWorkspace: vi.fn().mockResolvedValue(undefined),
 }));
 
@@ -68,7 +67,6 @@ describe("Sessions routes", () => {
     mockWorkspace.listSessions.mockResolvedValue([]);
     mockWorkspace.getMaxSessions.mockResolvedValue(5);
     mockWorkspace.getPruneThresholdDays.mockResolvedValue(7);
-    mockWorkspace.getWorkspacesDir.mockReturnValue("/tmp/test-workspaces");
     mockWorkspace.cleanupWorkspace.mockResolvedValue(undefined);
   });
 
@@ -138,11 +136,9 @@ describe("Sessions routes", () => {
         softCap: 5,
         available: 4,
         pruneThresholdDays: 7,
-        workspacesDir: "/tmp/test-workspaces",
         sessions: [
           {
             issueKey: "DXTR-123",
-            workspacePath: "/tmp/test-workspaces/DXTR-123",
             createdAt: mockDate.toISOString(),
             lastUsed: mockDate.toISOString(),
             hasSession: true,

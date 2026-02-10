@@ -4,6 +4,19 @@ import { getBotName } from "./utils.js";
 import { getConfig } from "./config.js";
 
 /**
+ * Validate an issue key to prevent path traversal.
+ * Accepts Jira keys (PROJ-123), GitHub keys (gh-owner-repo-42),
+ * and admin keys (admin-1234567890).
+ */
+const ISSUE_KEY_PATTERN = /^[A-Za-z0-9][\w.-]*$/;
+
+export function validateIssueKey(issueKey: string): void {
+  if (!issueKey || !ISSUE_KEY_PATTERN.test(issueKey)) {
+    throw new Error(`Invalid issue key format: ${issueKey}`);
+  }
+}
+
+/**
  * Session information for monitoring
  */
 export interface SessionInfo {
@@ -45,6 +58,7 @@ export async function getMaxSessions(): Promise<number> {
  * Get or create a persistent workspace for an issue
  */
 export async function getOrCreateWorkspace(issueKey: string): Promise<string> {
+  validateIssueKey(issueKey);
   const workspacesDir = getWorkspacesDir();
   const workDir = path.join(workspacesDir, issueKey);
   await fs.mkdir(workDir, { recursive: true });
@@ -109,6 +123,7 @@ export async function hasExistingSession(workDir: string): Promise<boolean> {
  * Check if a workspace exists for an issue key
  */
 export async function workspaceExists(issueKey: string): Promise<boolean> {
+  validateIssueKey(issueKey);
   const workspacesDir = getWorkspacesDir();
   const workDir = path.join(workspacesDir, issueKey);
   try {
@@ -124,6 +139,7 @@ export async function workspaceExists(issueKey: string): Promise<boolean> {
  * Removes both the workspace directory and the Claude session data.
  */
 export async function cleanupWorkspace(issueKey: string): Promise<void> {
+  validateIssueKey(issueKey);
   const workspacesDir = getWorkspacesDir();
   const workDir = path.join(workspacesDir, issueKey);
 

@@ -124,10 +124,8 @@ export const api = {
       softCap: number;
       available: number;
       pruneThresholdDays: number;
-      workspacesDir: string;
       sessions: Array<{
         issueKey: string;
-        workspacePath: string;
         createdAt: string;
         lastUsed: string;
         hasSession: boolean;

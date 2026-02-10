@@ -31,9 +31,15 @@ router.get("/jobs", async (req, res) => {
     const status = req.query.status as string | undefined;
     const limit = Math.min(parseInt(req.query.limit as string) || 50, 100);
 
+    const validStatuses = ["waiting", "active", "completed", "failed", "delayed"] as const;
+    if (status && !validStatuses.includes(status as (typeof validStatuses)[number])) {
+      res.status(400).json({ error: `Invalid status: ${status}. Valid values: ${validStatuses.join(", ")}` });
+      return;
+    }
+
     const statuses = status
-      ? [status as "waiting" | "active" | "completed" | "failed" | "delayed"]
-      : (["waiting", "active", "completed", "failed", "delayed"] as const);
+      ? [status as (typeof validStatuses)[number]]
+      : [...validStatuses];
 
     const jobs = await queue.getJobs([...statuses], 0, limit - 1);
 
@@ -138,10 +144,10 @@ router.post("/jobs", async (req, res) => {
     }
 
     const job: AdminJob = {
+      ...context,
       source: "admin",
       instruction: instruction.trim(),
       triggeredBy: "admin",
-      ...context,
     };
 
     const bullJob = await queue.add("process-ticket", job, {
