@@ -39,13 +39,6 @@ export function getMaxSessions(): number {
 }
 
 /**
- * Get the slot poll interval (reads from env at runtime)
- */
-function getSlotPollIntervalMs(): number {
-  return parseInt(process.env.SESSION_POLL_INTERVAL_MS || "5000", 10);
-}
-
-/**
  * Get or create a persistent workspace for an issue
  */
 export async function getOrCreateWorkspace(issueKey: string): Promise<string> {
@@ -179,31 +172,6 @@ export async function canCreateSession(): Promise<boolean> {
   const count = await getSessionCount();
   const maxSessions = getMaxSessions();
   return count < maxSessions;
-}
-
-/**
- * Wait for a session slot to become available
- * Polls until a slot opens up
- */
-export async function waitForSessionSlot(
-  timeoutMs: number = 300000, // 5 minute default timeout
-): Promise<void> {
-  const startTime = Date.now();
-  const maxSessions = getMaxSessions();
-  const pollInterval = getSlotPollIntervalMs();
-
-  while (!(await canCreateSession())) {
-    if (Date.now() - startTime > timeoutMs) {
-      throw new Error(
-        `Timeout waiting for session slot after ${timeoutMs}ms. Max sessions: ${maxSessions}`,
-      );
-    }
-
-    console.log(
-      `[Session] At max capacity (${maxSessions}), waiting for slot...`,
-    );
-    await new Promise((resolve) => setTimeout(resolve, pollInterval));
-  }
 }
 
 /**

@@ -281,7 +281,6 @@ flowchart TD
 | -------------------------- | ------------------------------ | ------------------------------ |
 | `WORKSPACES_DIR`           | Root directory for workspaces  | `/tmp/{botName}-workspaces`    |
 | `MAX_SESSIONS`             | Max concurrent sessions        | `5`                            |
-| `SESSION_POLL_INTERVAL_MS` | Polling interval when at limit | `5000`                         |
 
 ### Docker Volumes
 

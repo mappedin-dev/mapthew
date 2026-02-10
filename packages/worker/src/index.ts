@@ -12,7 +12,6 @@ import {
   getOrCreateWorkspace,
   hasExistingSession,
   canCreateSession,
-  waitForSessionSlot,
   workspaceExists,
   cleanupWorkspace,
   getMaxSessions,
@@ -57,6 +56,25 @@ async function postComment(job: Job, comment: string): Promise<void> {
 }
 
 /**
+ * Error thrown when session capacity is full.
+ * BullMQ will retry the job with exponential backoff, allowing cleanup
+ * jobs to run in between retries and free up slots.
+ *
+ * Without this, waitForSessionSlot() would block the single-concurrency
+ * worker in a polling loop, preventing cleanup jobs from ever running —
+ * a deadlock.
+ */
+class SessionCapacityError extends Error {
+  constructor(maxSessions: number) {
+    super(
+      `At max session capacity (${maxSessions}). ` +
+        `Job will be retried to allow cleanup jobs to free slots.`,
+    );
+    this.name = "SessionCapacityError";
+  }
+}
+
+/**
  * Process a regular job using persistent workspaces for session reuse
  */
 async function processRegularJob(job: Job): Promise<void> {
@@ -69,13 +87,15 @@ async function processRegularJob(job: Job): Promise<void> {
   // Check if this job can reuse an existing session
   const hasExisting = await workspaceExists(issueKey);
 
-  // If no existing workspace and we're at capacity, wait for a slot
+  // If no existing workspace and we're at capacity, throw to let BullMQ
+  // retry with backoff. This frees the worker to process cleanup jobs
+  // that may be waiting in the queue.
   if (!hasExisting && !(await canCreateSession())) {
+    const max = getMaxSessions();
     console.log(
-      `[Session] At max capacity (${getMaxSessions()}), waiting for slot...`,
+      `[Session] At max capacity (${max}), deferring job to allow cleanup jobs to run`,
     );
-    await waitForSessionSlot();
-    console.log(`[Session] Slot available, proceeding`);
+    throw new SessionCapacityError(max);
   }
 
   // Get or create the persistent workspace
@@ -134,6 +154,15 @@ worker.on("failed", async (job, err) => {
       console.error(
         `[Session] Cleanup failed for ${data.issueKey}:`,
         err.message,
+      );
+      return;
+    }
+
+    // Don't post comments for capacity retries — these are expected and
+    // the job will be retried automatically by BullMQ
+    if (err instanceof SessionCapacityError) {
+      console.log(
+        `[Session] ${getReadableId(data)} deferred (attempt ${job.attemptsMade}/${job.opts.attempts}): ${err.message}`,
       );
       return;
     }
