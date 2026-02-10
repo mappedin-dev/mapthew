@@ -1,13 +1,7 @@
-import {
-  createWorker,
-  type BullJob,
-  isGitHubJob,
-  isJiraJob,
-  postGitHubComment,
-  postJiraComment,
-  type Job,
-  getBotName,
-} from "@mapthew/shared";
+import { createWorker, type BullJob } from "@mapthew/shared/queue";
+import type { Job } from "@mapthew/shared/types";
+import { isAdminJob, isGitHubJob, isJiraJob, getBotName } from "@mapthew/shared/utils";
+import { postGitHubComment, postJiraComment } from "@mapthew/shared/api";
 import { invokeClaudeCode } from "./claude.js";
 import { getReadableId } from "./utils.js";
 import fs from "fs/promises";
@@ -32,15 +26,21 @@ const jiraCredentials = {
  */
 async function postComment(job: Job, comment: string): Promise<void> {
   if (isGitHubJob(job)) {
-    await postGitHubComment(
-      GITHUB_TOKEN,
-      job.owner,
-      job.repo,
-      job.prNumber,
-      comment
-    );
+    const number = job.prNumber ?? job.issueNumber;
+    if (number) {
+      await postGitHubComment(
+        GITHUB_TOKEN,
+        job.owner,
+        job.repo,
+        number,
+        comment
+      );
+    }
   } else if (isJiraJob(job)) {
     await postJiraComment(jiraCredentials, job.issueKey, comment);
+  } else if (isAdminJob(job)) {
+    // Admin jobs don't have an external source to post comments to
+    // Status is visible on the dashboard
   }
 }
 

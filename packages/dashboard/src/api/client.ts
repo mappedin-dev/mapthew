@@ -1,36 +1,14 @@
+import type {
+  QueueStats,
+  JobData,
+  SecretsStatus,
+  SearchResult,
+  GitHubRepoResult,
+  AdminJobContext,
+  AppConfig,
+} from "@mapthew/shared/types";
+
 const API_BASE = "/api";
-
-export interface QueueStats {
-  name: string;
-  counts: {
-    waiting: number;
-    active: number;
-    completed: number;
-    failed: number;
-    delayed: number;
-  };
-}
-
-export interface JobData {
-  id: string;
-  name: string;
-  data: Record<string, unknown>;
-  status: "waiting" | "active" | "completed" | "failed" | "delayed";
-  progress: number;
-  attemptsMade: number;
-  timestamp: number;
-  processedOn?: number;
-  finishedOn?: number;
-  failedReason?: string;
-  returnvalue?: unknown;
-}
-
-export interface Config {
-  botName: string;
-  botDisplayName: string;
-  claudeModel: string;
-  availableModels: string[];
-}
 
 // Token getter function, set by ApiTokenProvider
 let getAccessToken: (() => Promise<string>) | null = null;
@@ -82,12 +60,60 @@ export const api = {
       method: "DELETE",
     }),
 
-  // Config endpoints
-  getConfig: () => fetchJSON<Config>("/config"),
+  createJob: (instruction: string, context?: AdminJobContext) =>
+    fetchJSON<{ success: boolean; jobId: string }>("/queue/jobs", {
+      method: "POST",
+      body: JSON.stringify({ instruction, ...context }),
+    }),
 
-  updateConfig: (config: Partial<Config>) =>
-    fetchJSON<Config>("/config", {
+  // Search endpoints
+  searchJiraBoards: (query: string) =>
+    fetchJSON<SearchResult[]>(
+      `/search/jira/boards?q=${encodeURIComponent(query)}`
+    ),
+
+  searchJiraIssues: (query: string, boardId: string) =>
+    fetchJSON<SearchResult[]>(
+      `/search/jira/issues?q=${encodeURIComponent(
+        query
+      )}&board=${encodeURIComponent(boardId)}`
+    ),
+
+  searchGitHubRepos: (query: string) =>
+    fetchJSON<GitHubRepoResult[]>(
+      `/search/github/repos?q=${encodeURIComponent(query)}`
+    ),
+
+  searchGitHubBranches: (owner: string, repo: string, query: string) =>
+    fetchJSON<SearchResult[]>(
+      `/search/github/branches?owner=${encodeURIComponent(
+        owner
+      )}&repo=${encodeURIComponent(repo)}&q=${encodeURIComponent(query)}`
+    ),
+
+  searchGitHubPulls: (owner: string, repo: string, query: string) =>
+    fetchJSON<SearchResult[]>(
+      `/search/github/pulls?owner=${encodeURIComponent(
+        owner
+      )}&repo=${encodeURIComponent(repo)}&q=${encodeURIComponent(query)}`
+    ),
+
+  searchGitHubIssues: (owner: string, repo: string, query: string) =>
+    fetchJSON<SearchResult[]>(
+      `/search/github/issues?owner=${encodeURIComponent(
+        owner
+      )}&repo=${encodeURIComponent(repo)}&q=${encodeURIComponent(query)}`
+    ),
+
+  // Config endpoints
+  getConfig: () => fetchJSON<AppConfig>("/config"),
+
+  updateConfig: (config: Partial<AppConfig>) =>
+    fetchJSON<AppConfig>("/config", {
       method: "PUT",
       body: JSON.stringify(config),
     }),
+
+  // Secrets endpoint (read-only)
+  getSecrets: () => fetchJSON<SecretsStatus>("/secrets"),
 };

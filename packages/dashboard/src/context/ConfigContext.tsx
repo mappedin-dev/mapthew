@@ -2,6 +2,13 @@ import { createContext, useContext, type ReactNode } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "../api/client";
 
+/**
+ * Capitalize first letter of a string (for display name)
+ */
+function toDisplayName(name: string): string {
+  return name.charAt(0).toUpperCase() + name.slice(1);
+}
+
 interface ConfigContextValue {
   botName: string;
   botDisplayName: string;
@@ -21,9 +28,10 @@ export function ConfigProvider({ children }: { children: ReactNode }) {
     staleTime: 30000,
   });
 
+  const botName = data?.botName ?? "mapthew";
   const value: ConfigContextValue = {
-    botName: data?.botName ?? "mapthew",
-    botDisplayName: data?.botDisplayName ?? "Mapthew",
+    botName,
+    botDisplayName: toDisplayName(botName),
     isLoading,
   };
 

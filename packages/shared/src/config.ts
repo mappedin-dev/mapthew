@@ -1,42 +1,24 @@
-import { Redis } from "ioredis";
+import type { Redis } from "ioredis";
+import type { ClaudeModel, AppConfig } from "./types.js";
+import { getBotName, isValidBotName, isValidJiraUrl, setBotName } from "./utils.js";
 
-// Internal state - can be updated at runtime
-let botName: string | null = null;
 let redisClient: Redis | null = null;
 
-// Valid bot name pattern: lowercase alphanumeric, dashes, underscores (safe for git branches and queue names)
-const VALID_BOT_NAME_PATTERN = /^[a-z0-9][a-z0-9_-]*$/;
 const CONFIG_KEY = "mapthew:config";
-
-/**
- * Available Claude models
- */
-export const CLAUDE_MODELS = [
-  "claude-sonnet-4-5",
-  "claude-haiku-4-5",
-  "claude-opus-4-5",
-] as const;
-
-export type ClaudeModel = (typeof CLAUDE_MODELS)[number];
-
-/**
- * Application configuration stored in Redis
- */
-export interface AppConfig {
-  botName: string;
-  claudeModel: ClaudeModel;
-}
 
 const DEFAULT_CONFIG: AppConfig = {
   botName: process.env.BOT_NAME ?? "mapthew",
-  claudeModel:
-    (process.env.CLAUDE_MODEL as ClaudeModel) ?? "claude-sonnet-4-latest",
+  claudeModel: (process.env.CLAUDE_MODEL as ClaudeModel) ?? "claude-sonnet-4-5",
+  jiraBaseUrl: process.env.JIRA_BASE_URL ?? "",
 };
 
 /**
  * Initialize the Redis client for config storage
  */
-export function initConfigStore(redisUrl: string): void {
+export async function initConfigStore(redisUrl: string): Promise<void> {
+  // Avoid importing ioredis synchronously
+  // It has runtime behaviour we don't want to trigger in the client
+  const { Redis } = await import("ioredis");
   redisClient = new Redis(redisUrl);
 }
 
@@ -54,9 +36,13 @@ export async function getConfig(): Promise<AppConfig> {
       const config = JSON.parse(data) as AppConfig;
       // Update in-memory botName when loading from Redis
       if (config.botName && isValidBotName(config.botName)) {
-        botName = config.botName;
+        setBotName(config.botName);
       }
-      return config;
+      // Ensure jiraBaseUrl has a fallback
+      return {
+        ...DEFAULT_CONFIG,
+        ...config,
+      };
     }
   } catch (error) {
     console.error("Error loading config from Redis:", error);
@@ -75,8 +61,14 @@ export async function saveConfig(config: AppConfig): Promise<void> {
     );
   }
 
+  if (!isValidJiraUrl(config.jiraBaseUrl)) {
+    throw new Error(
+      `Invalid JIRA base URL "${config.jiraBaseUrl}" - must be a valid HTTPS URL`
+    );
+  }
+
   // Update in-memory state
-  botName = config.botName;
+  setBotName(config.botName);
 
   if (!redisClient) {
     console.warn("Redis client not initialized, config not persisted");
@@ -84,73 +76,6 @@ export async function saveConfig(config: AppConfig): Promise<void> {
   }
 
   await redisClient.set(CONFIG_KEY, JSON.stringify(config));
-}
-
-/**
- * Validate a bot name for use in branches and queue names
- * Must be lowercase alphanumeric with dashes/underscores, starting with alphanumeric
- */
-export function isValidBotName(name: string): boolean {
-  return VALID_BOT_NAME_PATTERN.test(name) && name.length <= 32;
-}
-
-/**
- * Get the bot name (used for triggers, branch prefixes, etc.)
- * Reads from: 1) runtime setter, 2) BOT_NAME env var, 3) default "mapthew"
- */
-export function getBotName(): string {
-  const name = botName ?? process.env.BOT_NAME ?? "mapthew";
-  if (!isValidBotName(name)) {
-    console.warn(
-      `Invalid BOT_NAME "${name}" - must be lowercase alphanumeric with dashes/underscores (max 32 chars). Using "mapthew".`
-    );
-    return "mapthew";
-  }
-  return name;
-}
-
-/**
- * Get the bot name formatted for display (first letter capitalized)
- * e.g., "mapthew" -> "Mapthew", "code-bot" -> "Code-bot"
- */
-export function getBotDisplayName(): string {
-  const name = getBotName();
-  return name.charAt(0).toUpperCase() + name.slice(1);
-}
-
-/**
- * Set the bot name at runtime (for future dashboard config)
- * @throws Error if the name is invalid
- */
-export function setBotName(name: string): void {
-  if (!isValidBotName(name)) {
-    throw new Error(
-      `Invalid bot name "${name}" - must be lowercase alphanumeric with dashes/underscores, starting with alphanumeric (max 32 chars)`
-    );
-  }
-  botName = name;
-}
-
-/**
- * Get the regex pattern for detecting bot triggers in comments
- * e.g., /@mapthew\s+(.*)/i
- */
-export function getTriggerPattern(): RegExp {
-  return new RegExp(`@${getBotName()}\\s+(.*)`, "i");
-}
-
-/**
- * Get the BullMQ queue name
- */
-export function getQueueName(): string {
-  return `${getBotName()}-jobs`;
-}
-
-/**
- * Get the branch prefix for new branches
- */
-export function getBranchPrefix(): string {
-  return `${getBotName()}-bot`;
 }
 
 /**

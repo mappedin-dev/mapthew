@@ -20,7 +20,24 @@ export default function Home() {
 
       <div className="grid grid-cols-2 gap-4">
         <Link
-          to="/jobs"
+          to="/new-task"
+          className="group col-span-2 px-6 py-4 bg-[#1a1a2e] hover:bg-[#1f1f38] border border-accent/70 hover:border-accent rounded-xl transition-all duration-300 hover:shadow-lg hover:shadow-accent/20"
+        >
+          <div className="flex items-center gap-4">
+            <div className="w-12 h-12 rounded-xl bg-accent/20 flex items-center justify-center group-hover:bg-accent/30 transition-colors">
+              <svg className="w-6 h-6 text-accent" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10" />
+              </svg>
+            </div>
+            <div className="text-left">
+              <p className="text-white font-semibold">{t("newTask.button")}</p>
+              <p className="text-dark-400 text-sm">{t("newTask.buttonDescription")}</p>
+            </div>
+          </div>
+        </Link>
+
+        <Link
+          to="/tasks"
           className="group glass-card px-6 py-4 hover:border-accent/50 transition-all duration-300 hover:shadow-lg hover:shadow-accent/10"
         >
           <div className="flex items-center gap-4">
@@ -30,8 +47,8 @@ export default function Home() {
               </svg>
             </div>
             <div className="text-left">
-              <p className="text-white font-semibold">{t("home.viewJobs")}</p>
-              <p className="text-dark-400 text-sm">{t("home.viewJobsDescription")}</p>
+              <p className="text-white font-semibold">{t("home.viewTasks")}</p>
+              <p className="text-dark-400 text-sm">{t("home.viewTasksDescription")}</p>
             </div>
           </div>
         </Link>

@@ -5,7 +5,8 @@ FROM node:22-alpine AS base
 RUN npm install -g pnpm
 WORKDIR /app
 
-COPY pnpm-workspace.yaml pnpm-lock.yaml ./
+COPY package.json pnpm-workspace.yaml pnpm-lock.yaml tsconfig.base.json ./
+COPY packages/shared/package.json ./packages/shared/
 COPY packages/dashboard/package.json ./packages/dashboard/
 
 # ============================================
@@ -14,7 +15,11 @@ COPY packages/dashboard/package.json ./packages/dashboard/
 FROM base AS dev
 RUN pnpm install --frozen-lockfile
 
+COPY packages/shared ./packages/shared
 COPY packages/dashboard ./packages/dashboard
+
+# Build shared package first
+RUN pnpm --filter @mapthew/shared build
 
 WORKDIR /app/packages/dashboard
 CMD ["pnpm", "build:watch"]
@@ -25,9 +30,11 @@ CMD ["pnpm", "build:watch"]
 FROM base AS builder
 RUN pnpm install --frozen-lockfile
 
+COPY packages/shared ./packages/shared
 COPY packages/dashboard ./packages/dashboard
 
-RUN pnpm --filter @mapthew/dashboard build
+# Build shared first, then dashboard
+RUN pnpm --filter @mapthew/shared build && pnpm --filter @mapthew/dashboard build
 
 # ============================================
 # Production stage - just the built files

@@ -1,7 +1,8 @@
 import { spawn } from "child_process";
 import path from "path";
 import { fileURLToPath } from "url";
-import { type Job, getClaudeModel } from "@mapthew/shared";
+import type { Job } from "@mapthew/shared/types";
+import { getClaudeModel } from "@mapthew/shared/config";
 import { buildPrompt } from "./prompt.js";
 import { getReadableId } from "./utils.js";
 

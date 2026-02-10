@@ -1,10 +1,14 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState, useEffect } from "react";
 import { useTranslation, Trans } from "react-i18next";
+import { CLAUDE_MODELS } from "@mapthew/shared/constants";
+import type { ClaudeModel } from "@mapthew/shared/types";
 import { api } from "../api/client";
 import { Dropdown } from "../components/Dropdown";
 import { LoadingSpinner } from "../components/LoadingSpinner";
 import { ErrorCard } from "../components/ErrorCard";
+import { SaveButton } from "../components/SaveButton";
+import { IntegrationsCard } from "../components/IntegrationsCard";
 import { useConfig } from "../context/ConfigContext";
 
 const BOT_NAME_REGEX = /^[a-z0-9][a-z0-9_-]*$/;
@@ -28,12 +32,26 @@ function validateBotName(value: string): string | null {
   return null;
 }
 
+function validateJiraBaseUrl(value: string): string | null {
+  if (!value) return null; // Empty is allowed
+  try {
+    const url = new URL(value);
+    if (url.protocol !== "https:") {
+      return "settings.integrations.jira.baseUrlInvalid";
+    }
+    return null;
+  } catch {
+    return "settings.integrations.jira.baseUrlInvalid";
+  }
+}
+
 export default function Settings() {
   const { t } = useTranslation();
   const { botDisplayName } = useConfig();
   const queryClient = useQueryClient();
   const [botName, setBotName] = useState("");
-  const [claudeModel, setClaudeModel] = useState("");
+  const [claudeModel, setClaudeModel] = useState<ClaudeModel | "">(CLAUDE_MODELS[0]);
+  const [jiraBaseUrl, setJiraBaseUrl] = useState("");
   const [touched, setTouched] = useState(false);
   const [saved, setSaved] = useState(false);
 
@@ -42,15 +60,21 @@ export default function Settings() {
     queryFn: api.getConfig,
   });
 
+  const { data: secrets } = useQuery({
+    queryKey: ["secrets"],
+    queryFn: api.getSecrets,
+  });
+
   useEffect(() => {
     if (config) {
       setBotName(config.botName);
       setClaudeModel(config.claudeModel);
+      setJiraBaseUrl(config.jiraBaseUrl);
     }
   }, [config]);
 
   const mutation = useMutation({
-    mutationFn: (updates: { botName: string; claudeModel: string }) =>
+    mutationFn: (updates: { botName: string; claudeModel: ClaudeModel; jiraBaseUrl: string }) =>
       api.updateConfig(updates),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["config"] });
@@ -61,6 +85,7 @@ export default function Settings() {
 
   const validationError = validateBotName(botName);
   const showError = touched && validationError;
+  const jiraBaseUrlError = validateJiraBaseUrl(jiraBaseUrl);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     // Only allow valid characters, auto-lowercase
@@ -71,8 +96,8 @@ export default function Settings() {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setTouched(true);
-    if (!validationError) {
-      mutation.mutate({ botName, claudeModel });
+    if (!validationError && !jiraBaseUrlError && claudeModel) {
+      mutation.mutate({ botName, claudeModel, jiraBaseUrl });
     }
   };
 
@@ -84,7 +109,10 @@ export default function Settings() {
     return <ErrorCard message={t("settings.errorLoading", { message: (error as Error).message })} />;
   }
 
-  const hasChanges = botName !== config?.botName || claudeModel !== config?.claudeModel;
+  const hasChanges =
+    botName !== config?.botName ||
+    claudeModel !== config?.claudeModel ||
+    jiraBaseUrl !== config?.jiraBaseUrl;
 
   return (
     <div className="max-w-xl mx-auto space-y-6">
@@ -97,90 +125,93 @@ export default function Settings() {
       </h1>
 
       <form onSubmit={handleSubmit} className="space-y-6">
-        <div className="glass-card p-6">
-          <label htmlFor="botName" className="block text-sm font-medium text-dark-200">
-            {t("settings.botName.label")}
-          </label>
-          <p className="text-sm text-dark-500 mt-1 mb-3">
-            <Trans
-              i18nKey="settings.botName.description"
-              values={{ botName: botName || "mapthew" }}
-              components={{
-                name: <code className="px-1.5 py-0.5 bg-dark-800 rounded text-accent" />
-              }}
-            />
-          </p>
-          <div className={`flex items-center bg-dark-950/50 border rounded-lg transition-all focus-within:ring-2 focus-within:border-transparent ${
-            showError
-              ? "border-red-500/50 focus-within:ring-red-500/50"
-              : "border-dark-700 focus-within:ring-accent"
-          }`}>
-            <span className="pl-4 text-dark-400 text-lg select-none">@</span>
-            <input
-              type="text"
-              id="botName"
-              value={botName}
-              onChange={handleChange}
-              onBlur={() => setTouched(true)}
-              maxLength={32}
-              autoComplete="off"
-              className="flex-1 px-2 py-3 bg-transparent text-white placeholder-dark-500 focus:outline-none"
-              placeholder={t("settings.botName.placeholder")}
+        <div className="glass-card p-6 space-y-6">
+          <div>
+            <label htmlFor="botName" className="block text-sm font-medium text-dark-200">
+              {t("settings.botName.label")}
+            </label>
+            <p className="text-sm text-dark-500 mt-1 mb-3">
+              <Trans
+                i18nKey="settings.botName.description"
+                values={{ botName: botName || "mapthew" }}
+                components={{
+                  name: <code className="px-1.5 py-0.5 bg-dark-800 rounded text-accent" />
+                }}
+              />
+            </p>
+            <div className={`flex items-center bg-dark-950/50 border rounded-lg transition-all focus-within:ring-2 focus-within:border-transparent ${
+              showError
+                ? "border-red-500/50 focus-within:ring-red-500/50"
+                : "border-dark-700 focus-within:ring-accent"
+            }`}>
+              <span className="pl-4 text-dark-400 text-lg select-none">@</span>
+              <input
+                type="text"
+                id="botName"
+                value={botName}
+                onChange={handleChange}
+                onBlur={() => setTouched(true)}
+                maxLength={32}
+                autoComplete="off"
+                className="flex-1 px-2 py-3 bg-transparent text-white placeholder-dark-500 focus:outline-none"
+                placeholder={t("settings.botName.placeholder")}
+              />
+            </div>
+            {showError && (
+              <p className="text-sm text-red-400 mt-3">{validationError}</p>
+            )}
+            <p className="text-sm text-dark-600 mt-3 italic">
+              {t("settings.botName.tip")}
+            </p>
+          </div>
+
+          <hr className="border-dark-700" />
+
+          <div>
+            <label htmlFor="claudeModel" className="block text-sm font-medium text-dark-200">
+              {t("settings.claudeModel.label")}
+            </label>
+            <p className="text-sm text-dark-500 mt-1 mb-3">
+              {t("settings.claudeModel.description")}
+            </p>
+            <Dropdown
+              id="claudeModel"
+              value={claudeModel}
+              options={CLAUDE_MODELS.map((model) => ({ value: model, label: model }))}
+              onChange={(value) => setClaudeModel(value as ClaudeModel)}
             />
           </div>
-          {showError && (
-            <p className="text-sm text-red-400 mt-3">{validationError}</p>
-          )}
-          <p className="text-sm text-dark-600 mt-3 italic">
-            {t("settings.botName.tip")}
-          </p>
         </div>
 
-        <div className="glass-card p-6">
-          <label htmlFor="claudeModel" className="block text-sm font-medium text-dark-200">
-            {t("settings.claudeModel.label")}
-          </label>
-          <p className="text-sm text-dark-500 mt-1 mb-3">
-            {t("settings.claudeModel.description")}
-          </p>
-          <Dropdown
-            id="claudeModel"
-            value={claudeModel}
-            options={config?.availableModels.map((model) => ({ value: model, label: model })) || []}
-            onChange={setClaudeModel}
+        {secrets && (
+          <IntegrationsCard
+            secrets={secrets}
+            jiraBaseUrl={jiraBaseUrl}
+            onJiraBaseUrlChange={setJiraBaseUrl}
+            jiraBaseUrlError={jiraBaseUrlError ? t(jiraBaseUrlError) : null}
           />
-        </div>
+        )}
 
         <div className="flex items-center justify-center gap-4">
-          <button
-            type="submit"
-            disabled={mutation.isPending || !hasChanges || !!validationError}
-            className="btn-primary disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {mutation.isPending ? (
-              <span className="flex items-center gap-2">
-                <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                {t("common.saving")}
-              </span>
-            ) : (
-              t("common.save")
-            )}
-          </button>
-          {saved && (
-            <span className="flex items-center gap-2 text-emerald-400 text-sm">
-              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-              </svg>
-              {t("common.saved")}
-            </span>
-          )}
+          <SaveButton
+            isPending={mutation.isPending}
+            isSaved={saved}
+            disabled={mutation.isPending || (!hasChanges && !saved) || !!validationError || !!jiraBaseUrlError}
+            label={t("common.save")}
+          />
           {mutation.error && (
             <span className="text-red-400 text-sm">
               {(mutation.error as Error).message}
             </span>
           )}
         </div>
-      </form>
+        </form>
+
+      <div className="text-center pt-8">
+        <p className="text-dark-600 text-sm">
+          {t("settings.version", { version: __APP_VERSION__ })}
+        </p>
+      </div>
     </div>
   );
 }

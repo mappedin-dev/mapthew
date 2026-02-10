@@ -1,5 +1,6 @@
 {
   "name": "mapthew",
+  "version": "0.1.0",
   "private": true,
   "packageManager": "pnpm@9.15.0",
   "scripts": {
@@ -7,18 +8,24 @@
     "dev:rebuild": "pnpm build && docker-compose down -v && docker-compose build --no-cache && docker-compose up",
     "build": "pnpm -r build",
     "lint": "pnpm -r lint",
-    "test": "pnpm -r --if-present test",
+    "test": "unset NO_COLOR && FORCE_COLOR=1 pnpm -r --if-present test",
     "clean": "pnpm -r clean && rm -rf node_modules",
     "shared": "pnpm --filter @mapthew/shared",
     "webhook": "pnpm --filter @mapthew/webhook",
     "worker": "pnpm --filter @mapthew/worker",
     "dashboard": "pnpm --filter @mapthew/dashboard",
     "mcp": "pnpm --filter @mapthew/integration-tests-mcp",
+    "mcp-test": "pnpm mcp integration",
+    "mcp-test:github": "pnpm mcp integration:github",
+    "mcp-test:jira": "pnpm mcp integration:jira",
+    "mcp-test:figma": "pnpm mcp integration:figma",
     "tunnel": "cloudflared tunnel --config cloudflare-tunnel-config.yml run",
     "requests:init": "bash scripts/sign-webhook.sh"
   },
   "devDependencies": {
+    "@types/node": "^22.0.0",
     "cloudflared": "^0.5.3",
-    "typescript": "^5.7.0"
+    "typescript": "^5.7.0",
+    "vitest": "^2.0.0"
   }
 }

@@ -58,16 +58,35 @@ Set `BOT_NAME` to customize the trigger (e.g., `@mybot` instead of `@mapthew`), 
 
 ## Credentials
 
-| Credential                | Purpose                              |
-| ------------------------- | ------------------------------------ |
-| **JIRA API Token**        | Reading tickets and posting comments |
-| **JIRA Webhook Secret**   | Verify webhook signatures            |
-| **GitHub PAT**            | `repo` and `workflow` scopes         |
-| **GitHub Webhook Secret** | Verify GitHub webhook signatures     |
-| **Anthropic API Key**     | Claude Code CLI                      |
-| **Auth0 Domain**          | Auth0 tenant for dashboard auth      |
-| **Auth0 Client ID**       | Dashboard SPA client ID              |
-| **Auth0 Audience**        | API identifier for JWT validation    |
+| Credential                | Purpose                              | Permissions / Scopes                                                                                                                                                   |
+| ------------------------- | ------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **JIRA API Token**        | Reading tickets and posting comments | Read tickets, write comments                                                                                                                                           |
+| **JIRA Webhook Secret**   | Verify webhook signatures            | —                                                                                                                                                                      |
+| **GitHub PAT**            | Git CLI + GitHub MCP                 | `repo`, `workflow`                                                                                                                                                     |
+| **GitHub Webhook Secret** | Verify GitHub webhook signatures     | —                                                                                                                                                                      |
+| **Figma API Key**         | Fetching design data from Figma      | `file_content:read`, `file_comments:read`, `file_metadata:read`, `library_assets:read`, `team_library_content:read`, `library_content:read`, `file_dev_resources:read` |
+| **Anthropic API Key**     | Claude Code CLI                      | —                                                                                                                                                                      |
+| **Auth0 Domain**          | Auth0 tenant for dashboard auth      | —                                                                                                                                                                      |
+| **Auth0 Client ID**       | Dashboard SPA client ID              | —                                                                                                                                                                      |
+| **Auth0 Audience**        | API identifier for JWT validation    | —                                                                                                                                                                      |
+
+## Webhooks
+
+Configure your webhooks to point to your tunnel or production URL. Make sure the webhook is configured to send a JSON payload.
+
+### JIRA
+
+Point to `/webhook/jira` for ticket comment triggers.
+
+### GitHub
+
+Point to `/webhook/github` and enable these events:
+
+- Commit comments
+- Discussion comments
+- Issue comments
+- Pull request review comments
+- Pull requests
 
 ## Setup
 
@@ -104,9 +123,15 @@ Set `BOT_NAME` to customize the trigger (e.g., `@mybot` instead of `@mapthew`), 
 
 4. Start a [cloudflare tunnel](#cloudflare-tunnel).
 
-5. Configure production services to point to your tunnel:
-   - **JIRA**: Point to `/webhook/jira` for ticket comment triggers
-   - **GitHub**: Point to `/webhook/github` for PR comment triggers (configure for `issue_comment` events)
+5. Configure your [webhooks](#webhooks) to point to your tunnel.
+
+## Unit Testing
+
+Run unit tests:
+
+```bash
+pnpm test
+```
 
 ## Local Testing
 
@@ -143,10 +168,11 @@ The webhook server will be accessible at the tunnel hostname.
 
 ## MCP Integration Tests
 
-To test the MCP servers locally, install the JIRA MCP server:
+To test the MCP servers locally, install the JIRA and Figma MCP servers:
 
 ```bash
 pipx install mcp-atlassian
+npm install -g figma-developer-mcp
 ```
 
 The GitHub MCP test uses a remote hosted endpoint and requires no local installation.
@@ -154,7 +180,7 @@ The GitHub MCP test uses a remote hosted endpoint and requires no local installa
 Run integration tests to make sure the MCP servers are accessible:
 
 ```bash
-pnpm mcp test
+pnpm mcp mcp-test
 ```
 
 ## Architecture

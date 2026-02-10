@@ -7,6 +7,18 @@ Test files that do not belong within packages as unit tests.
 - `/mcp` - MCP server integration tests against real external services.
 - `/e2e` - End-to-end integration test of the pipeline.
 
+## Running
+
+From the root:
+
+```bash
+pnpm mcp-test          # Run all MCP integration tests
+pnpm mcp-test:github   # GitHub MCP only
+pnpm mcp-test:jira     # JIRA MCP only
+```
+
+Note: `pnpm test` runs unit tests only. Integration tests must be run separately.
+
 ## MCP
 
 ### Adding a Test

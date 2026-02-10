@@ -1,6 +1,6 @@
 import { Queue, Worker, type Job as BullJob, type Processor } from "bullmq";
 import type { Job } from "./types.js";
-import { getQueueName } from "./config.js";
+import { getQueueName } from "./utils.js";
 
 /**
  * Create a BullMQ queue for adding jobs

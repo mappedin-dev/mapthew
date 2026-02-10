@@ -15,8 +15,10 @@
 
 4. **Commit** with a clear message following conventional commit format
 
-5. **Push** your changes
+5. **Check** for style or linting tools like prettier and fix any errors
 
-6. **Create or update PR**
+6. **Push** your changes
+
+7. **Create or update PR**
    - If working on an existing PR branch, the PR will automatically update
    - If you created a new branch, create a pull request using the GitHub MCP

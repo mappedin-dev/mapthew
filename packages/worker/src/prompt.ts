@@ -1,20 +1,15 @@
 import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
-import {
-  type Job,
-  isGitHubJob,
-  isJiraJob,
-  getBotName,
-  getBranchPrefix,
-} from "@mapthew/shared";
+import type { Job } from "@mapthew/shared/types";
+import { isGitHubJob, isJiraJob, isAdminJob, getBotName, getBranchPrefix } from "@mapthew/shared/utils";
 
 // ES module equivalent of __dirname
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 // JIRA post-processing config (Claude handles via MCP)
 const JIRA_LABEL_ADD = process.env.JIRA_LABEL_ADD || "";
-const JIRA_LABEL_REMOVE = process.env.JIRA_LABEL_REMOVE || "";
+const JIRA_LABEL_TRIGGER = process.env.JIRA_LABEL_TRIGGER || "";
 
 /**
  * Build JIRA post-processing instructions based on config
@@ -25,8 +20,8 @@ function buildJiraPostProcessing(): string {
   if (JIRA_LABEL_ADD) {
     steps.push(`- Add label: "${JIRA_LABEL_ADD}"`);
   }
-  if (JIRA_LABEL_REMOVE) {
-    steps.push(`- Remove label: "${JIRA_LABEL_REMOVE}" (if present)`);
+  if (JIRA_LABEL_TRIGGER) {
+    steps.push(`- Remove label: "${JIRA_LABEL_TRIGGER}" (if present)`);
   }
   // Always include transition instruction - Claude figures out the right status
   steps.push(`- Transition to an appropriate status (e.g., "Code Review", "In Review", "Ready for Review") based on available transitions`);
@@ -56,6 +51,50 @@ function loadInstructions(): string[] {
 const instructionTemplates = loadInstructions();
 
 /**
+ * Extract GitHub context from any job type
+ */
+function getGitHubContext(job: Job) {
+  if (isGitHubJob(job)) {
+    return {
+      owner: job.owner,
+      repo: job.repo,
+      prNumber: job.prNumber ? String(job.prNumber) : undefined,
+      issueNumber: job.issueNumber ? String(job.issueNumber) : undefined,
+      branchId: job.branchId,
+    };
+  }
+  if (isAdminJob(job)) {
+    return {
+      owner: job.githubOwner,
+      repo: job.githubRepo,
+      prNumber: job.githubPrNumber ? String(job.githubPrNumber) : undefined,
+      issueNumber: job.githubIssueNumber ? String(job.githubIssueNumber) : undefined,
+      branchId: job.githubBranchId,
+    };
+  }
+  return {};
+}
+
+/**
+ * Extract JIRA context from any job type
+ */
+function getJiraContext(job: Job) {
+  if (isJiraJob(job)) {
+    return {
+      issueKey: job.issueKey,
+      boardId: undefined,
+    };
+  }
+  if (isAdminJob(job)) {
+    return {
+      issueKey: job.jiraIssueKey,
+      boardId: job.jiraBoardId,
+    };
+  }
+  return {};
+}
+
+/**
  * Build the prompt for Claude Code CLI
  *
  * All instruction files are loaded and concatenated. Job-specific
@@ -63,19 +102,23 @@ const instructionTemplates = loadInstructions();
  * are replaced with "unknown".
  */
 export function buildPrompt(job: Job): string {
-  // Build job context for template replacement
+  const github = getGitHubContext(job);
+  const jira = getJiraContext(job);
+
   const context: Record<string, string> = {
+    // Common
     triggeredBy: job.triggeredBy,
     instruction: job.instruction,
     botName: getBotName(),
     branchPrefix: getBranchPrefix(),
-    // GitHub context (defaults to "unknown")
-    "github.owner": isGitHubJob(job) ? job.owner : "unknown",
-    "github.repo": isGitHubJob(job) ? job.repo : "unknown",
-    "github.prNumber":
-      isGitHubJob(job) && job.prNumber ? String(job.prNumber) : "unknown",
-    // Jira context (defaults to "unknown")
-    "jira.issueKey": isJiraJob(job) ? job.issueKey : "unknown",
+    // GitHub
+    "github.owner": github.owner ?? "unknown",
+    "github.repo": github.repo ?? "unknown",
+    "github.prNumber": github.prNumber ?? "unknown",
+    "github.branchId": github.branchId ?? "unknown",
+    // JIRA
+    "jira.issueKey": jira.issueKey ?? "unknown",
+    "jira.boardId": jira.boardId ?? "unknown",
   };
 
   // Add JIRA post-processing config to context

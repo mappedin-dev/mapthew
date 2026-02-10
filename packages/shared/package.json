@@ -4,10 +4,6 @@
   "private": true,
   "type": "module",
   "exports": {
-    ".": {
-      "import": "./dist/index.js",
-      "types": "./dist/index.d.ts"
-    },
     "./types": {
       "import": "./dist/types.js",
       "types": "./dist/types.d.ts"
@@ -19,6 +15,22 @@
     "./api": {
       "import": "./dist/api.js",
       "types": "./dist/api.d.ts"
+    },
+    "./api-types": {
+      "import": "./dist/api-types.js",
+      "types": "./dist/api-types.d.ts"
+    },
+    "./utils": {
+      "import": "./dist/utils.js",
+      "types": "./dist/utils.d.ts"
+    },
+    "./config": {
+      "import": "./dist/config.js",
+      "types": "./dist/config.d.ts"
+    },
+    "./constants": {
+      "import": "./dist/constants.js",
+      "types": "./dist/constants.d.ts"
     }
   },
   "scripts": {
@@ -32,8 +44,6 @@
     "ioredis": "^5.4.0"
   },
   "devDependencies": {
-    "@types/node": "^22.0.0",
-    "typescript": "^5.7.0",
-    "vitest": "^2.0.0"
+    "ioredis-mock": "^8.9.0"
   }
 }

@@ -4,9 +4,10 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "test": "tsx index.ts",
-    "test:github": "tsx index.ts --github",
-    "test:jira": "tsx index.ts --jira"
+    "integration": "tsx index.ts",
+    "integration:github": "tsx index.ts --github",
+    "integration:jira": "tsx index.ts --jira",
+    "integration:figma": "tsx index.ts --figma"
   },
   "devDependencies": {
     "@types/node": "^22.0.0",
