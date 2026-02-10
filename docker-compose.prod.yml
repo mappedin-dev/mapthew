@@ -12,7 +12,11 @@ services:
       target: prod
     ports:
       - "3000:3000"
+    volumes:
+      - mapthew-workspaces:/tmp/mapthew-workspaces:ro
+      - claude-sessions:/data/claude-sessions:ro
     environment:
+      - CLAUDE_CONFIG_DIR=/data/claude-sessions
       - REDIS_URL=redis://redis:6379
       - JIRA_BASE_URL
       - JIRA_EMAIL

@@ -56,9 +56,15 @@ export async function getOrCreateWorkspace(issueKey: string): Promise<string> {
 /**
  * Get the Claude home directory path
  * Claude Code CLI stores sessions in ~/.claude/projects/
+ *
+ * Supports CLAUDE_CONFIG_DIR env var to override the default path.
+ * This is needed when the claude-sessions volume is mounted at a
+ * different path (e.g. on the webhook container for read-only access).
  */
 function getClaudeHomeDir(): string {
-  // In Docker, HOME is typically /home/worker
+  if (process.env.CLAUDE_CONFIG_DIR) {
+    return process.env.CLAUDE_CONFIG_DIR;
+  }
   const home = process.env.HOME || "/home/worker";
   return path.join(home, ".claude");
 }

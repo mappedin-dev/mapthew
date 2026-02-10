@@ -33,6 +33,7 @@ Page URLs should follow the format of existing pages.
 - `#/tasks` — Tasks list with status filtering
 - `#/tasks/:id` — Task details with retry/remove
 - `#/new-task` — Create admin task with custom instruction
+- `#/sessions` — Active Claude Code sessions with stats and cleanup
 - `#/settings` — Bot name configuration
 
 ## Development

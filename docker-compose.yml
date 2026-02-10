@@ -42,7 +42,10 @@ services:
       - ./packages/shared/src:/app/packages/shared/src
       - ./packages/webhook/src:/app/packages/webhook/src
       - dashboard-dist:/app/packages/dashboard/dist:ro
+      - mapthew-workspaces:/tmp/mapthew-workspaces:ro
+      - claude-sessions:/data/claude-sessions:ro
     environment:
+      - CLAUDE_CONFIG_DIR=/data/claude-sessions
       - PORT=${WEBHOOK_PORT:-3000}
       - REDIS_URL=redis://redis:6379
       - JIRA_BASE_URL

@@ -116,4 +116,28 @@ export const api = {
 
   // Secrets endpoint (read-only)
   getSecrets: () => fetchJSON<SecretsStatus>("/secrets"),
+
+  // Sessions endpoints
+  getSessions: () =>
+    fetchJSON<{
+      count: number;
+      max: number;
+      available: number;
+      workspacesDir: string;
+      sessions: Array<{
+        issueKey: string;
+        workspacePath: string;
+        createdAt: string;
+        lastUsed: string;
+        hasSession: boolean;
+        sizeBytes: number;
+        sizeMB: number;
+      }>;
+    }>("/sessions"),
+
+  deleteSession: (issueKey: string) =>
+    fetchJSON<{ success: boolean; message: string }>(
+      `/sessions/${encodeURIComponent(issueKey)}`,
+      { method: "DELETE" }
+    ),
 };
