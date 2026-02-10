@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { buildPrompt } from "./prompt.js";
+import { buildPrompt, buildJiraPostProcessing } from "./prompt.js";
 import type { JiraJob, GitHubJob, AdminJob } from "@mapthew/shared/types";
 
 describe("buildPrompt", () => {
@@ -132,6 +132,113 @@ describe("buildPrompt", () => {
       expect(prompt).toContain("company");
       expect(prompt).toContain("codebase");
       expect(prompt).toContain("50");
+    });
+  });
+
+  describe("JIRA post-processing", () => {
+    it("includes transition instruction for JIRA jobs by default", () => {
+      const job: JiraJob = {
+        source: "jira",
+        issueKey: "POST-1",
+        projectKey: "POST",
+        instruction: "do work",
+        triggeredBy: "user",
+      };
+
+      const prompt = buildPrompt(job);
+
+      // Default (no env vars): should always include the transition step
+      expect(prompt).toContain("Transition to an appropriate status");
+    });
+
+    it("does not include post-processing for GitHub jobs", () => {
+      const job: GitHubJob = {
+        source: "github",
+        owner: "org",
+        repo: "repo",
+        prNumber: 1,
+        instruction: "do work",
+        triggeredBy: "user",
+      };
+
+      const prompt = buildPrompt(job);
+
+      // GitHub jobs should not have JIRA post-processing
+      expect(prompt).not.toContain("Transition to an appropriate status");
+    });
+  });
+
+  describe("buildJiraPostProcessing", () => {
+    it("returns only transition step when no labels configured", () => {
+      const result = buildJiraPostProcessing("", "");
+      expect(result).toBe(
+        '- Transition to an appropriate status (e.g., "Code Review", "In Review", "Ready for Review") based on available transitions'
+      );
+      expect(result).not.toContain("Add label");
+      expect(result).not.toContain("Remove label");
+    });
+
+    it("includes add label step when JIRA_LABEL_ADD is set", () => {
+      const result = buildJiraPostProcessing("claude-processed", "");
+      expect(result).toContain('- Add label: "claude-processed"');
+      expect(result).not.toContain("Remove label");
+      expect(result).toContain("Transition to an appropriate status");
+    });
+
+    it("includes remove label step when JIRA_LABEL_TRIGGER is set", () => {
+      const result = buildJiraPostProcessing("", "claude-ready");
+      expect(result).toContain('- Remove label: "claude-ready" (if present)');
+      expect(result).not.toContain("Add label");
+      expect(result).toContain("Transition to an appropriate status");
+    });
+
+    it("includes both label steps when both are set", () => {
+      const result = buildJiraPostProcessing("claude-processed", "claude-ready");
+      expect(result).toContain('- Add label: "claude-processed"');
+      expect(result).toContain('- Remove label: "claude-ready" (if present)');
+      expect(result).toContain("Transition to an appropriate status");
+    });
+
+    it("always includes transition step regardless of labels", () => {
+      const noLabels = buildJiraPostProcessing("", "");
+      const addOnly = buildJiraPostProcessing("done", "");
+      const removeOnly = buildJiraPostProcessing("", "ready");
+      const both = buildJiraPostProcessing("done", "ready");
+
+      for (const result of [noLabels, addOnly, removeOnly, both]) {
+        expect(result).toContain("Transition to an appropriate status");
+      }
+    });
+  });
+
+  describe("GitHub branchId", () => {
+    it("includes branchName in prompt for GitHub jobs", () => {
+      const job: GitHubJob = {
+        source: "github",
+        owner: "org",
+        repo: "repo",
+        prNumber: 1,
+        branchName: "feature/my-branch",
+        instruction: "fix bug",
+        triggeredBy: "dev",
+      };
+
+      const prompt = buildPrompt(job);
+      expect(prompt).toContain("feature/my-branch");
+    });
+
+    it("includes branchId in prompt for admin jobs", () => {
+      const job: AdminJob = {
+        source: "admin",
+        instruction: "do work",
+        triggeredBy: "admin",
+        githubOwner: "org",
+        githubRepo: "repo",
+        githubBranchId: "fix/admin-branch",
+      };
+
+      const prompt = buildPrompt(job);
+      expect(prompt).toContain("fix/admin-branch");
     });
   });
 

@@ -42,3 +42,9 @@ After opening pull requests:
 
 - Post the PR link as a comment on the Jira ticket using the Jira MCP
 - Comment format: `🤓 Done! <PR URL>`
+
+### Updating Ticket Status
+
+After completing your work, update the Jira ticket using the Jira MCP:
+
+{{jira.postProcessing}}

@@ -13,16 +13,17 @@ If you modified dependencies (`package.json`, `requirements.txt`, etc.):
 
 ## Linting & Formatting
 
-Run the linter/formatter if available and fix any issues:
+Run the linter/formatter if available and fix **all** issues before committing:
 
-- `pnpm lint`, `pnpm fmt`
-- `npm run prettier`
-- Or equivalent for the project
+- Check `package.json` scripts for: `lint`, `fmt`, `format`, `prettier`, `eslint`
+- Common commands: `pnpm lint`, `pnpm fmt`, `npm run prettier`, `npm run lint:fix`
+- Do **not** commit code with linter errors or warnings
 
 ## Testing
 
 Run relevant tests only — don't run the entire test suite if you only changed one module:
 
-1. Look for test files related to the files you changed (e.g., `foo.test.ts` for `foo.ts`)
+1. Check if there are any test scripts in `package.json`
 2. Use test filtering if available (e.g., `pnpm test -- --filter=module-name`)
-3. If tests fail due to your changes, fix them before proceeding
+3. Look for test files related to the files you changed (e.g., `foo.test.ts` for `foo.ts`)
+4. If tests fail due to your changes, fix them before proceeding

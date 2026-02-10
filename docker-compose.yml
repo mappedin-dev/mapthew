@@ -78,6 +78,8 @@ services:
       - JIRA_BASE_URL
       - JIRA_EMAIL
       - JIRA_API_TOKEN
+      - JIRA_LABEL_ADD
+      - JIRA_LABEL_TRIGGER
       - GITHUB_TOKEN
       - FIGMA_API_KEY
       - ANTHROPIC_API_KEY

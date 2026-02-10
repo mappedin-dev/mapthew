@@ -7,6 +7,31 @@ import { isGitHubJob, isJiraJob, isAdminJob, getBotName, getBranchPrefix } from 
 // ES module equivalent of __dirname
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
+// JIRA post-processing config (Claude handles via MCP)
+const JIRA_LABEL_ADD = process.env.JIRA_LABEL_ADD || "";
+const JIRA_LABEL_TRIGGER = process.env.JIRA_LABEL_TRIGGER || "";
+
+/**
+ * Build JIRA post-processing instructions based on config
+ */
+export function buildJiraPostProcessing(
+  labelAdd = JIRA_LABEL_ADD,
+  labelTrigger = JIRA_LABEL_TRIGGER
+): string {
+  const steps: string[] = [];
+
+  if (labelAdd) {
+    steps.push(`- Add label: "${labelAdd}"`);
+  }
+  if (labelTrigger) {
+    steps.push(`- Remove label: "${labelTrigger}" (if present)`);
+  }
+  // Always include transition instruction - Claude figures out the right status
+  steps.push(`- Transition to an appropriate status (e.g., "Code Review", "In Review", "Ready for Review") based on available transitions`);
+
+  return steps.join("\n");
+}
+
 // Load all instruction markdown files at startup
 const instructionsDir = path.join(__dirname, "..", "instructions");
 
@@ -38,6 +63,7 @@ function getGitHubContext(job: Job) {
       repo: job.repo,
       prNumber: job.prNumber ? String(job.prNumber) : undefined,
       issueNumber: job.issueNumber ? String(job.issueNumber) : undefined,
+      branchId: job.branchName,
     };
   }
   if (isAdminJob(job)) {
@@ -46,6 +72,7 @@ function getGitHubContext(job: Job) {
       repo: job.githubRepo,
       prNumber: job.githubPrNumber ? String(job.githubPrNumber) : undefined,
       issueNumber: job.githubIssueNumber ? String(job.githubIssueNumber) : undefined,
+      branchId: job.githubBranchId,
     };
   }
   return {};
@@ -91,10 +118,16 @@ export function buildPrompt(job: Job): string {
     "github.owner": github.owner ?? "unknown",
     "github.repo": github.repo ?? "unknown",
     "github.prNumber": github.prNumber ?? "unknown",
+    "github.branchId": github.branchId ?? "unknown",
     // JIRA
     "jira.issueKey": jira.issueKey ?? "unknown",
     "jira.boardId": jira.boardId ?? "unknown",
   };
+
+  // Add JIRA post-processing config to context
+  if (isJiraJob(job)) {
+    context["jira.postProcessing"] = buildJiraPostProcessing();
+  }
 
   // Process all instruction templates
   const prompt = instructionTemplates
