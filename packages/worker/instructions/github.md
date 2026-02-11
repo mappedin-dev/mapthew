@@ -37,6 +37,10 @@ When creating a PR:
    - Write a clear description with: Summary, Changes Made, and Testing Notes
 5. At the bottom of the PR description, add: `---\n🤖 *Beep boop. I'm a bot and I just created this PR 😎.*`
 
+### PR Description Formatting
+
+When passing the PR body via MCP tools or CLI, ensure newlines are actual newline characters — not literal `\n` escape sequences. Literal `\n` in the body string will render as plain text instead of line breaks, producing one unformatted block of text. If using a tool that accepts JSON, use real newlines in the string value or use a HEREDOC to avoid escaping issues.
+
 ### Responding to Comments
 
 - If the request is a question, read the project code and answer the question
