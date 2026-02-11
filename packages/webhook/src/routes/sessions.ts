@@ -34,6 +34,9 @@ router.get("/", async (_req, res) => {
         hasSession: s.hasSession,
         sizeBytes: s.sizeBytes,
         sizeMB: Math.round((s.sizeBytes / 1024 / 1024) * 100) / 100,
+        workspaceSizeBytes: s.workspaceSizeBytes,
+        workspaceSizeMB:
+          Math.round((s.workspaceSizeBytes / 1024 / 1024) * 100) / 100,
       })),
     });
   } catch (error) {
@@ -54,6 +57,10 @@ router.get("/stats", async (_req, res) => {
     const activeSessions = sessions.filter((s: SessionInfo) => s.hasSession);
     const count = activeSessions.length;
     const totalSize = activeSessions.reduce((sum: number, s: SessionInfo) => sum + s.sizeBytes, 0);
+    const totalWorkspaceSize = activeSessions.reduce(
+      (sum: number, s: SessionInfo) => sum + s.workspaceSizeBytes,
+      0,
+    );
 
     res.json({
       total: sessions.length,
@@ -64,6 +71,9 @@ router.get("/stats", async (_req, res) => {
       utilizationPercent: softCap > 0 ? Math.round((count / softCap) * 100) : 0,
       totalSizeBytes: totalSize,
       totalSizeMB: Math.round((totalSize / 1024 / 1024) * 100) / 100,
+      totalWorkspaceSizeBytes: totalWorkspaceSize,
+      totalWorkspaceSizeMB:
+        Math.round((totalWorkspaceSize / 1024 / 1024) * 100) / 100,
     });
   } catch (error) {
     console.error("Error getting session stats:", error);

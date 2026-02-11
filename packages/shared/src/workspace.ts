@@ -26,6 +26,7 @@ export interface SessionInfo {
   lastUsed: Date;
   hasSession: boolean;
   sizeBytes: number;
+  workspaceSizeBytes: number;
 }
 
 /**
@@ -300,6 +301,7 @@ export async function listSessions(): Promise<SessionInfo[]> {
       let createdAt = new Date();
       let lastUsed = new Date();
       let sizeBytes = 0;
+      let workspaceSizeBytes = 0;
 
       try {
         const workspaceStat = await fs.stat(workspacePath);
@@ -330,6 +332,9 @@ export async function listSessions(): Promise<SessionInfo[]> {
         sizeBytes = await getDirectorySize(sessionDir);
       }
 
+      // Calculate workspace directory size
+      workspaceSizeBytes = await getDirectorySize(workspacePath);
+
       sessions.push({
         issueKey,
         workspacePath,
@@ -337,6 +342,7 @@ export async function listSessions(): Promise<SessionInfo[]> {
         lastUsed,
         hasSession,
         sizeBytes,
+        workspaceSizeBytes,
       });
     }
 

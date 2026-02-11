@@ -131,6 +131,8 @@ export const api = {
         hasSession: boolean;
         sizeBytes: number;
         sizeMB: number;
+        workspaceSizeBytes: number;
+        workspaceSizeMB: number;
       }>;
     }>("/sessions"),
 

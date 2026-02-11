@@ -36,6 +36,7 @@ function SessionRow({
     lastUsed: string;
     createdAt: string;
     sizeMB: number;
+    workspaceSizeMB: number;
   };
 }) {
   const { t } = useTranslation();
@@ -64,6 +65,7 @@ function SessionRow({
         {new Date(session.createdAt).toLocaleDateString()}
       </td>
       <td className="py-4 px-4 text-sm text-dark-400">{session.sizeMB} MB</td>
+      <td className="py-4 px-4 text-sm text-dark-400">{session.workspaceSizeMB} MB</td>
       <td className="py-4 px-4">
         <button
           onClick={handleDelete}
@@ -93,8 +95,13 @@ export default function Sessions() {
   }
 
   const sessions = data?.sessions.filter((s) => s.hasSession) ?? [];
-  const totalSizeMB =
+  const totalSessionSizeMB =
     sessions.reduce((sum, s) => sum + s.sizeMB, 0).toFixed(1);
+  const totalWorkspaceSizeMB =
+    sessions.reduce((sum, s) => sum + s.workspaceSizeMB, 0).toFixed(1);
+  const totalCombinedSizeMB = (
+    sessions.reduce((sum, s) => sum + s.sizeMB + s.workspaceSizeMB, 0)
+  ).toFixed(1);
 
   return (
     <div className="space-y-6">
@@ -111,11 +118,13 @@ export default function Sessions() {
       </h1>
 
       {data && (
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
           <StatCard label={t("sessions.stats.active")} value={`${data.count} / ${data.softCap}`} accent />
           <StatCard label={t("sessions.stats.available")} value={data.available} />
           <StatCard label={t("sessions.stats.pruneThreshold")} value={`${data.pruneThresholdDays}d`} />
-          <StatCard label={t("sessions.stats.totalSize")} value={`${totalSizeMB} MB`} />
+          <StatCard label={t("sessions.stats.totalSessionSize")} value={`${totalSessionSizeMB} MB`} />
+          <StatCard label={t("sessions.stats.totalWorkspaceSize")} value={`${totalWorkspaceSizeMB} MB`} />
+          <StatCard label={t("sessions.stats.totalSize")} value={`${totalCombinedSizeMB} MB`} accent />
         </div>
       )}
 
@@ -136,7 +145,10 @@ export default function Sessions() {
                   {t("sessions.table.created")}
                 </th>
                 <th className="text-left py-4 px-4 text-xs font-semibold text-dark-400 uppercase tracking-wider">
-                  {t("sessions.table.size")}
+                  {t("sessions.table.sessionSize")}
+                </th>
+                <th className="text-left py-4 px-4 text-xs font-semibold text-dark-400 uppercase tracking-wider">
+                  {t("sessions.table.workspaceSize")}
                 </th>
                 <th className="text-left py-4 px-4 text-xs font-semibold text-dark-400 uppercase tracking-wider">
                   {t("sessions.table.actions")}

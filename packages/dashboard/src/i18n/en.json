@@ -143,13 +143,16 @@
       "active": "Active",
       "available": "Available",
       "pruneThreshold": "Prune After",
+      "totalSessionSize": "Session Size",
+      "totalWorkspaceSize": "Workspace Size",
       "totalSize": "Total Size"
     },
     "table": {
       "issueKey": "Issue Key",
       "lastUsed": "Last Used",
       "created": "Created",
-      "size": "Size",
+      "sessionSize": "Session Size",
+      "workspaceSize": "Workspace Size",
       "actions": "Actions"
     },
     "deleteConfirm": "Delete session for {{issueKey}}?",
