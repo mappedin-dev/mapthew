@@ -34,12 +34,6 @@ router.post("/", jiraWebhookAuth, async (req, res) => {
   try {
     const payload = req.body;
     const config = await getConfig();
-    const eventType = payload.webhookEvent ?? "unknown";
-    const issueKey = payload.issue?.key ?? "unknown";
-
-    console.log(
-      `Jira webhook received: event=${eventType} issue=${issueKey}`,
-    );
 
     // --- Handle comment_created events (existing behaviour) ---
     if (isCommentCreatedEvent(payload as WebhookPayload)) {
@@ -80,16 +74,10 @@ router.post("/", jiraWebhookAuth, async (req, res) => {
     const labelTrigger = getLabelTrigger(config);
     if (isIssueUpdatedEvent(payload as JiraIssueUpdatedPayload)) {
       const updatedPayload = payload as JiraIssueUpdatedPayload;
-      const changelogItems = updatedPayload.changelog?.items ?? [];
-
-      console.log(
-        `Jira issue_updated: issue=${issueKey} labelTrigger="${labelTrigger || "(not configured)"}" changelog=${JSON.stringify(changelogItems)}`,
-      );
 
       if (!labelTrigger) {
-        console.log(
-          `Jira webhook ignored: JIRA_LABEL_TRIGGER not configured`,
-        );
+        if (config.verboseLogs)
+          console.log(`Jira webhook ignored: label trigger not configured`);
         return res.status(200).json({
           status: "ignored",
           reason: "label trigger not configured",
@@ -97,18 +85,10 @@ router.post("/", jiraWebhookAuth, async (req, res) => {
       }
 
       if (!wasLabelAdded(updatedPayload, labelTrigger)) {
-        const labelChanges = changelogItems.filter(
-          (item: { field: string }) => item.field === "labels",
-        );
-        if (labelChanges.length === 0) {
+        if (config.verboseLogs)
           console.log(
-            `Jira webhook ignored: no "labels" field in changelog (fields changed: ${changelogItems.map((i: { field: string }) => i.field).join(", ") || "none"})`,
+            `Jira webhook ignored: trigger label "${labelTrigger}" was not added to ${updatedPayload.issue.key}`,
           );
-        } else {
-          console.log(
-            `Jira webhook ignored: label "${labelTrigger}" was not added. Label changes: ${JSON.stringify(labelChanges)}`,
-          );
-        }
         return res.status(200).json({
           status: "ignored",
           reason: `trigger label "${labelTrigger}" was not added`,
