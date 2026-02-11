@@ -123,6 +123,7 @@ describe("Sessions routes", () => {
           lastUsed: mockDate,
           hasSession: true,
           sizeBytes: 1048576,
+          workspaceSizeBytes: 2097152,
         },
       ]);
       mockWorkspace.getMaxSessions.mockResolvedValue(5);
@@ -144,6 +145,8 @@ describe("Sessions routes", () => {
             hasSession: true,
             sizeBytes: 1048576,
             sizeMB: 1,
+            workspaceSizeBytes: 2097152,
+            workspaceSizeMB: 2,
           },
         ],
       });
@@ -172,9 +175,9 @@ describe("Sessions routes", () => {
   describe("GET /api/sessions/stats", () => {
     it("returns session statistics", async () => {
       mockWorkspace.listSessions.mockResolvedValue([
-        { hasSession: true, sizeBytes: 1000 },
-        { hasSession: false, sizeBytes: 500 },
-        { hasSession: true, sizeBytes: 2000 },
+        { hasSession: true, sizeBytes: 1000, workspaceSizeBytes: 500 },
+        { hasSession: false, sizeBytes: 500, workspaceSizeBytes: 300 },
+        { hasSession: true, sizeBytes: 2000, workspaceSizeBytes: 1000 },
       ]);
       mockWorkspace.getMaxSessions.mockResolvedValue(5);
 
@@ -191,6 +194,8 @@ describe("Sessions routes", () => {
         utilizationPercent: 40,
         totalSizeBytes: 3000,
         totalSizeMB: 0,
+        totalWorkspaceSizeBytes: 1500,
+        totalWorkspaceSizeMB: 0,
       });
     });
 

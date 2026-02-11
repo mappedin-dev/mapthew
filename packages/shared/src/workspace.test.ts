@@ -377,7 +377,7 @@ describe("workspace", () => {
       expect(sessions[1].hasSession).toBe(true);
     });
 
-    it("includes size information for sessions", async () => {
+    it("includes session size information", async () => {
       const ws = path.join(testWorkspacesDir, "DXTR-SIZE");
       await fs.mkdir(ws, { recursive: true });
 
@@ -388,6 +388,18 @@ describe("workspace", () => {
       const sessions = await listSessions();
 
       expect(sessions[0].sizeBytes).toBeGreaterThanOrEqual(1000);
+    });
+
+    it("includes workspace size information", async () => {
+      const ws = path.join(testWorkspacesDir, "DXTR-WSSIZE");
+      await fs.mkdir(ws, { recursive: true });
+
+      // Add files to the workspace directory
+      await fs.writeFile(path.join(ws, "code.ts"), "y".repeat(2000));
+
+      const sessions = await listSessions();
+
+      expect(sessions[0].workspaceSizeBytes).toBeGreaterThanOrEqual(2000);
     });
   });
 
