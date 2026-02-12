@@ -10,9 +10,12 @@ vi.mock("@mapthew/shared/config", async () => {
     getConfig: vi.fn().mockResolvedValue({
       botName: "testbot",
       claudeModel: "claude-sonnet-4-5",
+      jiraLabelTrigger: "claude-ready",
+      jiraLabelAdd: "claude-processed",
       maxSessions: 5,
       pruneThresholdDays: 7,
       pruneIntervalDays: 7,
+      maxOutputBufferBytes: 10 * 1024 * 1024,
     }),
     saveConfig: vi.fn().mockResolvedValue(undefined),
   };

@@ -7,6 +7,7 @@ const mockWorkspace = vi.hoisted(() => ({
   listSessions: vi.fn().mockResolvedValue([]),
   getMaxSessions: vi.fn().mockResolvedValue(5),
   getPruneThresholdDays: vi.fn().mockResolvedValue(7),
+  getSessionSizes: vi.fn().mockResolvedValue([]),
   cleanupWorkspace: vi.fn().mockResolvedValue(undefined),
 }));
 
@@ -67,6 +68,7 @@ describe("Sessions routes", () => {
     mockWorkspace.listSessions.mockResolvedValue([]);
     mockWorkspace.getMaxSessions.mockResolvedValue(5);
     mockWorkspace.getPruneThresholdDays.mockResolvedValue(7);
+    mockWorkspace.getSessionSizes.mockResolvedValue([]);
     mockWorkspace.cleanupWorkspace.mockResolvedValue(undefined);
   });
 
@@ -122,7 +124,6 @@ describe("Sessions routes", () => {
           createdAt: mockDate,
           lastUsed: mockDate,
           hasSession: true,
-          sizeBytes: 1048576,
         },
       ]);
       mockWorkspace.getMaxSessions.mockResolvedValue(5);
@@ -142,8 +143,6 @@ describe("Sessions routes", () => {
             createdAt: mockDate.toISOString(),
             lastUsed: mockDate.toISOString(),
             hasSession: true,
-            sizeBytes: 1048576,
-            sizeMB: 1,
           },
         ],
       });
@@ -172,9 +171,9 @@ describe("Sessions routes", () => {
   describe("GET /api/sessions/stats", () => {
     it("returns session statistics", async () => {
       mockWorkspace.listSessions.mockResolvedValue([
-        { hasSession: true, sizeBytes: 1000 },
-        { hasSession: false, sizeBytes: 500 },
-        { hasSession: true, sizeBytes: 2000 },
+        { hasSession: true },
+        { hasSession: false },
+        { hasSession: true },
       ]);
       mockWorkspace.getMaxSessions.mockResolvedValue(5);
 
@@ -189,8 +188,6 @@ describe("Sessions routes", () => {
         available: 3,
         pruneThresholdDays: 7,
         utilizationPercent: 40,
-        totalSizeBytes: 3000,
-        totalSizeMB: 0,
       });
     });
 
@@ -202,6 +199,56 @@ describe("Sessions routes", () => {
 
       expect(res.status).toBe(500);
       expect(res.body).toEqual({ error: "Failed to get session stats" });
+    });
+  });
+
+  describe("GET /api/sessions/sizes", () => {
+    it("returns sizes for all sessions", async () => {
+      mockWorkspace.getSessionSizes.mockResolvedValue([
+        { issueKey: "DXTR-123", sizeBytes: 1048576, workspaceSizeBytes: 2097152 },
+        { issueKey: "DXTR-456", sizeBytes: 0, workspaceSizeBytes: 524288 },
+      ]);
+
+      const app = createAppWithoutAuth();
+      const res = await request(app).get("/api/sessions/sizes");
+
+      expect(res.status).toBe(200);
+      expect(res.body).toEqual({
+        sizes: [
+          {
+            issueKey: "DXTR-123",
+            sizeBytes: 1048576,
+            sizeMB: 1,
+            workspaceSizeBytes: 2097152,
+            workspaceSizeMB: 2,
+          },
+          {
+            issueKey: "DXTR-456",
+            sizeBytes: 0,
+            sizeMB: 0,
+            workspaceSizeBytes: 524288,
+            workspaceSizeMB: 0.5,
+          },
+        ],
+      });
+    });
+
+    it("returns empty sizes when no sessions exist", async () => {
+      const app = createAppWithoutAuth();
+      const res = await request(app).get("/api/sessions/sizes");
+
+      expect(res.status).toBe(200);
+      expect(res.body).toEqual({ sizes: [] });
+    });
+
+    it("returns 500 when size calculation fails", async () => {
+      mockWorkspace.getSessionSizes.mockRejectedValue(new Error("disk error"));
+
+      const app = createAppWithoutAuth();
+      const res = await request(app).get("/api/sessions/sizes");
+
+      expect(res.status).toBe(500);
+      expect(res.body).toEqual({ error: "Failed to get session sizes" });
     });
   });
 

@@ -4,7 +4,6 @@ import express, { type Request, type Response } from "express";
 import {
   PORT,
   REDIS_URL,
-  VERBOSE_LOGS,
   secretsManager,
   AZURE_KEYVAULT_URL,
   AZURE_IDENTITY_ENDPOINT,
@@ -72,6 +71,5 @@ app.get("/health", (_req, res) => {
   app.listen(PORT, () => {
     console.log(`Webhook server listening on port ${PORT}`);
     console.log(`  Listening as: @${getBotName()}`);
-    if (VERBOSE_LOGS) console.log(`  Verbose logging enabled`);
   });
 })();

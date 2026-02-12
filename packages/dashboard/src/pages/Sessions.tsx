@@ -19,24 +19,49 @@ function formatTimeAgo(dateStr: string): string {
   return `${diffDays}d ago`;
 }
 
-function StatCard({ label, value, accent }: { label: string; value: string | number; accent?: boolean }) {
+/** Format a size in MB, auto-converting to GB when >= 1024 MB */
+function formatSize(mb: number): string {
+  if (mb >= 1024) {
+    return `${(mb / 1024).toFixed(2)} GB`;
+  }
+  return `${mb.toFixed(1)} MB`;
+}
+
+function StatCard({ label, value, accent, loading }: { label: string; value: string | number; accent?: boolean; loading?: boolean }) {
   return (
     <div className="glass-card p-4 text-center">
-      <p className={`text-2xl font-bold ${accent ? "text-accent" : "text-white"}`}>{value}</p>
+      {loading ? (
+        <p className="text-2xl font-bold text-dark-400 animate-pulse">...</p>
+      ) : (
+        <p className={`text-2xl font-bold ${accent ? "text-accent" : "text-white"}`}>{value}</p>
+      )}
       <p className="text-dark-400 text-sm mt-1">{label}</p>
     </div>
   );
 }
 
+/** Inline loading placeholder for size cells */
+function SizeCell({ value, loading }: { value?: number; loading: boolean }) {
+  if (loading) {
+    return <span className="text-dark-500 animate-pulse">--</span>;
+  }
+  return <>{formatSize(value ?? 0)}</>;
+}
+
 function SessionRow({
   session,
+  sizeMB,
+  workspaceSizeMB,
+  sizesLoading,
 }: {
   session: {
     issueKey: string;
     lastUsed: string;
     createdAt: string;
-    sizeMB: number;
   };
+  sizeMB?: number;
+  workspaceSizeMB?: number;
+  sizesLoading: boolean;
 }) {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
@@ -45,6 +70,7 @@ function SessionRow({
     mutationFn: () => api.deleteSession(session.issueKey),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["sessions"] });
+      queryClient.invalidateQueries({ queryKey: ["sessionSizes"] });
     },
   });
 
@@ -63,7 +89,12 @@ function SessionRow({
       <td className="py-4 px-4 text-sm text-dark-400">
         {new Date(session.createdAt).toLocaleDateString()}
       </td>
-      <td className="py-4 px-4 text-sm text-dark-400">{session.sizeMB} MB</td>
+      <td className="py-4 px-4 text-sm text-dark-400">
+        <SizeCell value={sizeMB} loading={sizesLoading} />
+      </td>
+      <td className="py-4 px-4 text-sm text-dark-400">
+        <SizeCell value={workspaceSizeMB} loading={sizesLoading} />
+      </td>
       <td className="py-4 px-4">
         <button
           onClick={handleDelete}
@@ -80,10 +111,18 @@ function SessionRow({
 export default function Sessions() {
   const { t } = useTranslation();
 
+  // Fast query: session list without sizes
   const { data, isLoading, error } = useQuery({
     queryKey: ["sessions"],
     queryFn: api.getSessions,
     refetchInterval: 10_000,
+  });
+
+  // Slow query: sizes loaded separately
+  const { data: sizesData, isLoading: sizesLoading } = useQuery({
+    queryKey: ["sessionSizes"],
+    queryFn: api.getSessionSizes,
+    refetchInterval: 30_000, // Less frequent since it's expensive
   });
 
   if (isLoading) return <LoadingSpinner />;
@@ -93,8 +132,22 @@ export default function Sessions() {
   }
 
   const sessions = data?.sessions.filter((s) => s.hasSession) ?? [];
-  const totalSizeMB =
-    sessions.reduce((sum, s) => sum + s.sizeMB, 0).toFixed(1);
+
+  // Build a lookup map from sizes data
+  const sizeMap = new Map<string, { sizeMB: number; workspaceSizeMB: number }>();
+  if (sizesData) {
+    for (const s of sizesData.sizes) {
+      sizeMap.set(s.issueKey, { sizeMB: s.sizeMB, workspaceSizeMB: s.workspaceSizeMB });
+    }
+  }
+
+  const activeKeys = new Set(sessions.map((s) => s.issueKey));
+  const activeSizes = sizesData
+    ? sizesData.sizes.filter((s) => activeKeys.has(s.issueKey))
+    : [];
+  const totalSessionSizeMB = activeSizes.reduce((sum, s) => sum + s.sizeMB, 0);
+  const totalWorkspaceSizeMB = activeSizes.reduce((sum, s) => sum + s.workspaceSizeMB, 0);
+  const totalCombinedSizeMB = activeSizes.reduce((sum, s) => sum + s.sizeMB + s.workspaceSizeMB, 0);
 
   return (
     <div className="space-y-6">
@@ -111,11 +164,13 @@ export default function Sessions() {
       </h1>
 
       {data && (
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
           <StatCard label={t("sessions.stats.active")} value={`${data.count} / ${data.softCap}`} accent />
           <StatCard label={t("sessions.stats.available")} value={data.available} />
           <StatCard label={t("sessions.stats.pruneThreshold")} value={`${data.pruneThresholdDays}d`} />
-          <StatCard label={t("sessions.stats.totalSize")} value={`${totalSizeMB} MB`} />
+          <StatCard label={t("sessions.stats.totalSessionSize")} value={formatSize(totalSessionSizeMB)} loading={sizesLoading} />
+          <StatCard label={t("sessions.stats.totalWorkspaceSize")} value={formatSize(totalWorkspaceSizeMB)} loading={sizesLoading} />
+          <StatCard label={t("sessions.stats.totalSize")} value={formatSize(totalCombinedSizeMB)} accent loading={sizesLoading} />
         </div>
       )}
 
@@ -136,7 +191,10 @@ export default function Sessions() {
                   {t("sessions.table.created")}
                 </th>
                 <th className="text-left py-4 px-4 text-xs font-semibold text-dark-400 uppercase tracking-wider">
-                  {t("sessions.table.size")}
+                  {t("sessions.table.sessionSize")}
+                </th>
+                <th className="text-left py-4 px-4 text-xs font-semibold text-dark-400 uppercase tracking-wider">
+                  {t("sessions.table.workspaceSize")}
                 </th>
                 <th className="text-left py-4 px-4 text-xs font-semibold text-dark-400 uppercase tracking-wider">
                   {t("sessions.table.actions")}
@@ -144,9 +202,18 @@ export default function Sessions() {
               </tr>
             </thead>
             <tbody>
-              {sessions.map((session) => (
-                <SessionRow key={session.issueKey} session={session} />
-              ))}
+              {sessions.map((session) => {
+                const sizes = sizeMap.get(session.issueKey);
+                return (
+                  <SessionRow
+                    key={session.issueKey}
+                    session={session}
+                    sizeMB={sizes?.sizeMB}
+                    workspaceSizeMB={sizes?.workspaceSizeMB}
+                    sizesLoading={sizesLoading}
+                  />
+                );
+              })}
             </tbody>
           </table>
         </div>

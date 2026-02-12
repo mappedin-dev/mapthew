@@ -4,7 +4,7 @@ import type { JiraJob, GitHubJob, AdminJob } from "@mapthew/shared/types";
 
 describe("buildPrompt", () => {
   describe("JiraJob", () => {
-    it("builds prompt with JIRA context", () => {
+    it("builds prompt with JIRA context", async () => {
       const job: JiraJob = {
         source: "jira",
         issueKey: "DXTR-123",
@@ -13,7 +13,7 @@ describe("buildPrompt", () => {
         triggeredBy: "john@example.com",
       };
 
-      const prompt = buildPrompt(job);
+      const prompt = await buildPrompt(job);
 
       // Verify instruction is included
       expect(prompt).toContain("implement authentication");
@@ -25,7 +25,7 @@ describe("buildPrompt", () => {
       expect(prompt).toContain("john@example.com");
     });
 
-    it("sets GitHub context to unknown for JIRA jobs", () => {
+    it("sets GitHub context to unknown for JIRA jobs", async () => {
       const job: JiraJob = {
         source: "jira",
         issueKey: "ABC-456",
@@ -34,7 +34,7 @@ describe("buildPrompt", () => {
         triggeredBy: "user@example.com",
       };
 
-      const prompt = buildPrompt(job);
+      const prompt = await buildPrompt(job);
 
       // GitHub fields should be "unknown" for JIRA jobs since no GitHub context provided
       expect(prompt).toContain("ABC-456"); // JIRA context should be present
@@ -44,7 +44,7 @@ describe("buildPrompt", () => {
   });
 
   describe("GitHubJob", () => {
-    it("builds prompt with GitHub PR context", () => {
+    it("builds prompt with GitHub PR context", async () => {
       const job: GitHubJob = {
         source: "github",
         owner: "myorg",
@@ -54,7 +54,7 @@ describe("buildPrompt", () => {
         triggeredBy: "developer",
       };
 
-      const prompt = buildPrompt(job);
+      const prompt = await buildPrompt(job);
 
       // Verify instruction is included
       expect(prompt).toContain("add unit tests");
@@ -67,7 +67,7 @@ describe("buildPrompt", () => {
       expect(prompt).toContain("42");
     });
 
-    it("builds prompt with GitHub issue context", () => {
+    it("builds prompt with GitHub issue context", async () => {
       const job: GitHubJob = {
         source: "github",
         owner: "org",
@@ -77,14 +77,14 @@ describe("buildPrompt", () => {
         triggeredBy: "user",
       };
 
-      const prompt = buildPrompt(job);
+      const prompt = await buildPrompt(job);
 
       expect(prompt).toContain("implement feature");
       expect(prompt).toContain("org");
       expect(prompt).toContain("repo");
     });
 
-    it("includes PR number when provided", () => {
+    it("includes PR number when provided", async () => {
       const job: GitHubJob = {
         source: "github",
         owner: "org",
@@ -94,26 +94,26 @@ describe("buildPrompt", () => {
         triggeredBy: "dev",
       };
 
-      const prompt = buildPrompt(job);
+      const prompt = await buildPrompt(job);
       expect(prompt).toContain("5");
     });
   });
 
   describe("AdminJob", () => {
-    it("builds prompt with minimal admin context", () => {
+    it("builds prompt with minimal admin context", async () => {
       const job: AdminJob = {
         source: "admin",
         instruction: "run maintenance task",
         triggeredBy: "admin",
       };
 
-      const prompt = buildPrompt(job);
+      const prompt = await buildPrompt(job);
 
       expect(prompt).toContain("run maintenance task");
       expect(prompt).toContain("admin");
     });
 
-    it("builds prompt with full admin context", () => {
+    it("builds prompt with full admin context", async () => {
       const job: AdminJob = {
         source: "admin",
         instruction: "complex task",
@@ -125,7 +125,7 @@ describe("buildPrompt", () => {
         githubPrNumber: 50,
       };
 
-      const prompt = buildPrompt(job);
+      const prompt = await buildPrompt(job);
 
       expect(prompt).toContain("complex task");
       expect(prompt).toContain("PROJ-999");
@@ -136,7 +136,7 @@ describe("buildPrompt", () => {
   });
 
   describe("JIRA post-processing", () => {
-    it("includes transition instruction for JIRA jobs by default", () => {
+    it("includes transition instruction for JIRA jobs by default", async () => {
       const job: JiraJob = {
         source: "jira",
         issueKey: "POST-1",
@@ -145,13 +145,13 @@ describe("buildPrompt", () => {
         triggeredBy: "user",
       };
 
-      const prompt = buildPrompt(job);
+      const prompt = await buildPrompt(job);
 
       // Default (no env vars): should always include the transition step
       expect(prompt).toContain("Transition to an appropriate status");
     });
 
-    it("does not include post-processing for GitHub jobs", () => {
+    it("does not include post-processing for GitHub jobs", async () => {
       const job: GitHubJob = {
         source: "github",
         owner: "org",
@@ -161,7 +161,7 @@ describe("buildPrompt", () => {
         triggeredBy: "user",
       };
 
-      const prompt = buildPrompt(job);
+      const prompt = await buildPrompt(job);
 
       // GitHub jobs should not have JIRA post-processing
       expect(prompt).not.toContain("Transition to an appropriate status");
@@ -212,7 +212,7 @@ describe("buildPrompt", () => {
   });
 
   describe("GitHub branchId", () => {
-    it("includes branchName in prompt for GitHub jobs", () => {
+    it("includes branchName in prompt for GitHub jobs", async () => {
       const job: GitHubJob = {
         source: "github",
         owner: "org",
@@ -223,11 +223,11 @@ describe("buildPrompt", () => {
         triggeredBy: "dev",
       };
 
-      const prompt = buildPrompt(job);
+      const prompt = await buildPrompt(job);
       expect(prompt).toContain("feature/my-branch");
     });
 
-    it("includes branchId in prompt for admin jobs", () => {
+    it("includes branchId in prompt for admin jobs", async () => {
       const job: AdminJob = {
         source: "admin",
         instruction: "do work",
@@ -237,13 +237,13 @@ describe("buildPrompt", () => {
         githubBranchId: "fix/admin-branch",
       };
 
-      const prompt = buildPrompt(job);
+      const prompt = await buildPrompt(job);
       expect(prompt).toContain("fix/admin-branch");
     });
   });
 
   describe("prompt structure", () => {
-    it("returns non-empty prompt with substantial content", () => {
+    it("returns non-empty prompt with substantial content", async () => {
       const job: JiraJob = {
         source: "jira",
         issueKey: "X-1",
@@ -252,12 +252,12 @@ describe("buildPrompt", () => {
         triggeredBy: "user",
       };
 
-      const prompt = buildPrompt(job);
+      const prompt = await buildPrompt(job);
       expect(prompt.length).toBeGreaterThan(100); // Should have substantial content from instruction files
       expect(prompt).toContain("test instruction"); // Instruction must be included
     });
 
-    it("concatenates multiple instruction files with separator", () => {
+    it("concatenates multiple instruction files with separator", async () => {
       const job: JiraJob = {
         source: "jira",
         issueKey: "Y-1",
@@ -266,14 +266,14 @@ describe("buildPrompt", () => {
         triggeredBy: "user",
       };
 
-      const prompt = buildPrompt(job);
+      const prompt = await buildPrompt(job);
       // Instruction files are joined with "---" separator
       // This indicates multiple templates were loaded and combined
       const separatorCount = (prompt.match(/---/g) || []).length;
       expect(separatorCount).toBeGreaterThanOrEqual(1);
     });
 
-    it("replaces template variables with job context", () => {
+    it("replaces template variables with job context", async () => {
       const job: JiraJob = {
         source: "jira",
         issueKey: "PROJ-999",
@@ -282,7 +282,7 @@ describe("buildPrompt", () => {
         triggeredBy: "developer@test.com",
       };
 
-      const prompt = buildPrompt(job);
+      const prompt = await buildPrompt(job);
       // Variables should be replaced, not left as placeholders
       expect(prompt).not.toContain("{{instruction}}");
       expect(prompt).not.toContain("{{triggeredBy}}");

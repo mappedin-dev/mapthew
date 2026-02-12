@@ -2,21 +2,18 @@ import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
 import type { Job } from "@mapthew/shared/types";
-import { isGitHubJob, isJiraJob, isAdminJob, getBotName, getBranchPrefix } from "@mapthew/shared/utils";
+import { isGitHubJob, isJiraJob, isAdminJob, getBotName, getBranchPrefix, getLabelTrigger, getLabelAdd } from "@mapthew/shared/utils";
+import { getConfig } from "@mapthew/shared/config";
 
 // ES module equivalent of __dirname
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-
-// JIRA post-processing config (Claude handles via MCP)
-const JIRA_LABEL_ADD = process.env.JIRA_LABEL_ADD || "";
-const JIRA_LABEL_TRIGGER = process.env.JIRA_LABEL_TRIGGER || "";
 
 /**
  * Build JIRA post-processing instructions based on config
  */
 export function buildJiraPostProcessing(
-  labelAdd = JIRA_LABEL_ADD,
-  labelTrigger = JIRA_LABEL_TRIGGER
+  labelAdd = "",
+  labelTrigger = "",
 ): string {
   const steps: string[] = [];
 
@@ -104,7 +101,7 @@ function getJiraContext(job: Job) {
  * context is injected via template placeholders. Missing values
  * are replaced with "unknown".
  */
-export function buildPrompt(job: Job): string {
+export async function buildPrompt(job: Job): Promise<string> {
   const github = getGitHubContext(job);
   const jira = getJiraContext(job);
 
@@ -126,7 +123,11 @@ export function buildPrompt(job: Job): string {
 
   // Add JIRA post-processing config to context
   if (isJiraJob(job)) {
-    context["jira.postProcessing"] = buildJiraPostProcessing();
+    const config = await getConfig();
+    context["jira.postProcessing"] = buildJiraPostProcessing(
+      getLabelAdd(config),
+      getLabelTrigger(config),
+    );
   }
 
   // Process all instruction templates

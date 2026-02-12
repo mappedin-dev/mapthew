@@ -14,9 +14,12 @@ function getDefaultConfig(): AppConfig {
   return {
     botName: process.env.BOT_NAME ?? "mapthew",
     claudeModel: (process.env.CLAUDE_MODEL as ClaudeModel) ?? "claude-sonnet-4-5",
-    maxSessions: parseInt(process.env.MAX_SESSIONS || "5", 10),
+    jiraLabelTrigger: process.env.JIRA_LABEL_TRIGGER ?? "claude-ready",
+    jiraLabelAdd: process.env.JIRA_LABEL_ADD ?? "claude-processed",
+    maxSessions: parseInt(process.env.MAX_SESSIONS || "20", 10),
     pruneThresholdDays: parseInt(process.env.PRUNE_THRESHOLD_DAYS || "7", 10),
     pruneIntervalDays: parseInt(process.env.PRUNE_INTERVAL_DAYS || "7", 10),
+    maxOutputBufferBytes: 10 * 1024 * 1024,
   };
 }
 

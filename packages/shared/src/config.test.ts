@@ -14,6 +14,21 @@ import {
 } from "./config.js";
 import { setBotName } from "./utils.js";
 
+/** Helper: build a full AppConfig with sensible defaults, overridable per-test */
+function buildConfig(overrides: Record<string, unknown> = {}) {
+  return {
+    botName: "mapthew",
+    claudeModel: "claude-sonnet-4-5" as const,
+    jiraLabelTrigger: "claude-ready",
+    jiraLabelAdd: "claude-processed",
+    maxSessions: 20,
+    pruneThresholdDays: 7,
+    pruneIntervalDays: 7,
+    maxOutputBufferBytes: 10 * 1024 * 1024,
+    ...overrides,
+  };
+}
+
 describe("config persistence with Redis", () => {
   beforeEach(async () => {
     // Initialize with mock Redis
@@ -22,13 +37,14 @@ describe("config persistence with Redis", () => {
   });
 
   it("saves and retrieves config", async () => {
-    await saveConfig({
-      botName: "persistbot",
-      claudeModel: "claude-sonnet-4-5",
-      maxSessions: 10,
-      pruneThresholdDays: 14,
-      pruneIntervalDays: 1,
-    });
+    await saveConfig(
+      buildConfig({
+        botName: "persistbot",
+        maxSessions: 10,
+        pruneThresholdDays: 14,
+        pruneIntervalDays: 1,
+      }),
+    );
 
     const config = await getConfig();
     expect(config.botName).toBe("persistbot");
@@ -40,13 +56,7 @@ describe("config persistence with Redis", () => {
 
   it("throws on invalid bot name during save", async () => {
     await expect(
-      saveConfig({
-        botName: "Invalid-Name",
-        claudeModel: "claude-sonnet-4-5",
-        maxSessions: 5,
-        pruneThresholdDays: 7,
-        pruneIntervalDays: 7,
-      })
+      saveConfig(buildConfig({ botName: "Invalid-Name" })),
     ).rejects.toThrow();
   });
 
@@ -57,6 +67,18 @@ describe("config persistence with Redis", () => {
     expect(config.botName).toBeDefined();
     expect(config.claudeModel).toBeDefined();
   });
+
+  it("includes maxOutputBufferBytes in default config", async () => {
+    await initConfigStore("redis://localhost:6382");
+    const config = await getConfig();
+    expect(config.maxOutputBufferBytes).toBe(10 * 1024 * 1024);
+  });
+
+  it("persists maxOutputBufferBytes", async () => {
+    await saveConfig(buildConfig({ maxOutputBufferBytes: 5 * 1024 * 1024 }));
+    const config = await getConfig();
+    expect(config.maxOutputBufferBytes).toBe(5 * 1024 * 1024);
+  });
 });
 
 describe("getClaudeModel", () => {
@@ -66,13 +88,7 @@ describe("getClaudeModel", () => {
   });
 
   it("returns model from config", async () => {
-    await saveConfig({
-      botName: "mapthew",
-      claudeModel: "claude-haiku-4-5",
-      maxSessions: 5,
-      pruneThresholdDays: 7,
-      pruneIntervalDays: 7,
-    });
+    await saveConfig(buildConfig({ claudeModel: "claude-haiku-4-5" }));
 
     const model = await getClaudeModel();
     expect(model).toBe("claude-haiku-4-5");

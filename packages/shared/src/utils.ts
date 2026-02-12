@@ -5,6 +5,7 @@ import type {
   AdminJob,
   WebhookPayload,
   GitHubWebhookPayload,
+  JiraIssueUpdatedPayload,
 } from "./types.js";
 
 // Internal state - can be updated at runtime
@@ -158,6 +159,52 @@ export function isGitHubIssueCommentEvent(
 export function extractIssueKeyFromBranch(branchName: string): string | null {
   const match = branchName.match(/([A-Z]+-\d+)/i);
   return match ? match[1].toUpperCase() : null;
+}
+
+/**
+ * Check if a JIRA webhook payload is an issue_updated event
+ */
+export function isIssueUpdatedEvent(payload: JiraIssueUpdatedPayload): boolean {
+  return payload.webhookEvent === "jira:issue_updated";
+}
+
+/**
+ * Check if a specific label was added in a JIRA issue_updated event.
+ * The changelog "Labels" field stores space-separated label lists.
+ */
+export function wasLabelAdded(
+  payload: JiraIssueUpdatedPayload,
+  label: string,
+): boolean {
+  if (!payload.changelog?.items) return false;
+
+  return payload.changelog.items.some((item) => {
+    if (item.field !== "labels") return false;
+
+    const oldLabels = item.fromString
+      ? item.fromString.split(/\s+/)
+      : [];
+    const newLabels = item.toString
+      ? item.toString.split(/\s+/)
+      : [];
+
+    // Label was added if it's in the new set but not the old set
+    return newLabels.includes(label) && !oldLabels.includes(label);
+  });
+}
+
+/**
+ * Get the configured JIRA label trigger from AppConfig.
+ */
+export function getLabelTrigger(config?: { jiraLabelTrigger?: string }): string {
+  return config?.jiraLabelTrigger ?? "claude-ready";
+}
+
+/**
+ * Get the configured JIRA label to add after processing from AppConfig.
+ */
+export function getLabelAdd(config?: { jiraLabelAdd?: string }): string {
+  return config?.jiraLabelAdd ?? "claude-processed";
 }
 
 /**

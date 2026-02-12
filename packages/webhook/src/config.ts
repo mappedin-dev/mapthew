@@ -4,7 +4,6 @@ import type { Job } from "@mapthew/shared/types";
 
 export const PORT = process.env.PORT || 3000;
 export const REDIS_URL = process.env.REDIS_URL || "redis://localhost:6379";
-export const VERBOSE_LOGS = process.env.VERBOSE_LOGS === "true";
 
 // Auth0 - required
 export const AUTH0_DOMAIN = process.env.AUTH0_DOMAIN;

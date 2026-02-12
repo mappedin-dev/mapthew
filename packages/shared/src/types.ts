@@ -15,12 +15,18 @@ export type ClaudeModel = (typeof CLAUDE_MODELS)[number];
 export interface AppConfig {
   botName: string;
   claudeModel: ClaudeModel;
+  /** Label that triggers a job when added to a JIRA issue */
+  jiraLabelTrigger: string;
+  /** Label to add to a JIRA issue after processing completes */
+  jiraLabelAdd: string;
   /** Soft cap — oldest session evicted when exceeded */
   maxSessions: number;
   /** Sessions inactive longer than this (days) are pruned */
   pruneThresholdDays: number;
   /** How often the pruning job runs (days) */
   pruneIntervalDays: number;
+  /** Max stdout/stderr buffer per CLI invocation in bytes (default: 10 MB) */
+  maxOutputBufferBytes: number;
 }
 
 /**
@@ -165,6 +171,30 @@ export interface GitHubReviewCommentPayload {
   };
   sender: {
     login: string;
+  };
+}
+
+/**
+ * JIRA webhook payload for jira:issue_updated event (label changes)
+ * Used to detect when a trigger label is added to an issue
+ */
+export interface JiraIssueUpdatedPayload {
+  webhookEvent: string;
+  issue: {
+    key: string;
+    fields?: {
+      summary?: string;
+    };
+  };
+  changelog?: {
+    items: Array<{
+      field: string;
+      fromString: string | null;
+      toString: string | null;
+    }>;
+  };
+  user?: {
+    displayName: string;
   };
 }
 

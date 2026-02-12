@@ -25,7 +25,6 @@ const mockSecretsManager = vi.hoisted(() => ({
 vi.mock("../config.js", () => ({
   queue: mockQueue,
   secretsManager: mockSecretsManager,
-  VERBOSE_LOGS: false,
 }));
 
 // Mock middleware to skip signature verification in tests

@@ -37,6 +37,8 @@ export default function Settings() {
   const queryClient = useQueryClient();
   const [botName, setBotName] = useState("");
   const [claudeModel, setClaudeModel] = useState<ClaudeModel | "">(CLAUDE_MODELS[0]);
+  const [jiraLabelTrigger, setJiraLabelTrigger] = useState("");
+  const [jiraLabelAdd, setJiraLabelAdd] = useState("");
   const [maxSessions, setMaxSessions] = useState(5);
   const [pruneThresholdDays, setPruneThresholdDays] = useState(7);
   const [pruneIntervalDays, setPruneIntervalDays] = useState(7);
@@ -56,6 +58,8 @@ export default function Settings() {
     if (config) {
       setBotName(config.botName);
       setClaudeModel(config.claudeModel);
+      setJiraLabelTrigger(config.jiraLabelTrigger);
+      setJiraLabelAdd(config.jiraLabelAdd);
       setMaxSessions(config.maxSessions);
       setPruneThresholdDays(config.pruneThresholdDays);
       setPruneIntervalDays(config.pruneIntervalDays);
@@ -182,6 +186,62 @@ export default function Settings() {
                 saveField("claudeModel", value as ClaudeModel);
               }}
             />
+          </div>
+        </div>
+
+        <div className="glass-card p-6 space-y-6">
+          <h2 className="text-lg font-semibold text-white">{t("settings.jiraLabels.title")}</h2>
+
+          <div>
+            <label htmlFor="jiraLabelTrigger" className="block text-sm font-medium text-dark-200">
+              {t("settings.jiraLabels.trigger.label")}
+            </label>
+            <p className="text-sm text-dark-500 mt-1 mb-3">
+              {t("settings.jiraLabels.trigger.description")}
+            </p>
+            <input
+              type="text"
+              id="jiraLabelTrigger"
+              value={jiraLabelTrigger}
+              onChange={(e) => setJiraLabelTrigger(e.target.value)}
+              onBlur={() => saveField("jiraLabelTrigger", jiraLabelTrigger)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") (e.target as HTMLInputElement).blur();
+              }}
+              autoComplete="off"
+              className="w-full px-4 py-3 bg-dark-950/50 border border-dark-700 rounded-lg text-white placeholder-dark-500 focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent"
+              placeholder={t("settings.jiraLabels.trigger.placeholder")}
+            />
+            <p className="text-sm text-dark-600 mt-3 italic">
+              {t("settings.jiraLabels.trigger.hint")}
+            </p>
+          </div>
+
+          <hr className="border-dark-700" />
+
+          <div>
+            <label htmlFor="jiraLabelAdd" className="block text-sm font-medium text-dark-200">
+              {t("settings.jiraLabels.add.label")}
+            </label>
+            <p className="text-sm text-dark-500 mt-1 mb-3">
+              {t("settings.jiraLabels.add.description")}
+            </p>
+            <input
+              type="text"
+              id="jiraLabelAdd"
+              value={jiraLabelAdd}
+              onChange={(e) => setJiraLabelAdd(e.target.value)}
+              onBlur={() => saveField("jiraLabelAdd", jiraLabelAdd)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") (e.target as HTMLInputElement).blur();
+              }}
+              autoComplete="off"
+              className="w-full px-4 py-3 bg-dark-950/50 border border-dark-700 rounded-lg text-white placeholder-dark-500 focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent"
+              placeholder={t("settings.jiraLabels.add.placeholder")}
+            />
+            <p className="text-sm text-dark-600 mt-3 italic">
+              {t("settings.jiraLabels.add.hint")}
+            </p>
           </div>
         </div>
 

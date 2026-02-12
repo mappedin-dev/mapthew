@@ -25,7 +25,6 @@ export interface SessionInfo {
   createdAt: Date;
   lastUsed: Date;
   hasSession: boolean;
-  sizeBytes: number;
 }
 
 /**
@@ -279,7 +278,8 @@ async function getDirectorySize(dirPath: string): Promise<number> {
 }
 
 /**
- * List all sessions with their metadata
+ * List all sessions with their metadata (without sizes — fast).
+ * Use `getSessionSizes()` to fetch sizes separately.
  */
 export async function listSessions(): Promise<SessionInfo[]> {
   const sessions: SessionInfo[] = [];
@@ -299,7 +299,6 @@ export async function listSessions(): Promise<SessionInfo[]> {
       // Get workspace stats
       let createdAt = new Date();
       let lastUsed = new Date();
-      let sizeBytes = 0;
 
       try {
         const workspaceStat = await fs.stat(workspacePath);
@@ -324,19 +323,12 @@ export async function listSessions(): Promise<SessionInfo[]> {
       // Check Claude's session dir in ~/.claude/projects/
       const hasSession = await hasExistingSession(workspacePath);
 
-      // Calculate size from the Claude session dir
-      if (hasSession) {
-        const sessionDir = getClaudeSessionDir(workspacePath);
-        sizeBytes = await getDirectorySize(sessionDir);
-      }
-
       sessions.push({
         issueKey,
         workspacePath,
         createdAt,
         lastUsed,
         hasSession,
-        sizeBytes,
       });
     }
 
@@ -347,6 +339,51 @@ export async function listSessions(): Promise<SessionInfo[]> {
   }
 
   return sessions;
+}
+
+/**
+ * Size information for a single session, keyed by issueKey.
+ */
+export interface SessionSizeInfo {
+  issueKey: string;
+  sizeBytes: number;
+  workspaceSizeBytes: number;
+}
+
+/**
+ * Calculate sizes for all sessions.
+ * This is expensive (recursive directory walks) and should be called
+ * separately from listSessions() so the page can load quickly.
+ */
+export async function getSessionSizes(): Promise<SessionSizeInfo[]> {
+  const sizes: SessionSizeInfo[] = [];
+  const workspacesDir = getWorkspacesDir();
+
+  try {
+    const entries = await fs.readdir(workspacesDir, { withFileTypes: true });
+
+    for (const entry of entries) {
+      if (!entry.isDirectory()) continue;
+
+      const issueKey = entry.name;
+      const workspacePath = path.join(workspacesDir, issueKey);
+
+      let sizeBytes = 0;
+      const hasSession = await hasExistingSession(workspacePath);
+      if (hasSession) {
+        const sessionDir = getClaudeSessionDir(workspacePath);
+        sizeBytes = await getDirectorySize(sessionDir);
+      }
+
+      const workspaceSizeBytes = await getDirectorySize(workspacePath);
+
+      sizes.push({ issueKey, sizeBytes, workspaceSizeBytes });
+    }
+  } catch {
+    // Return empty array if workspaces dir doesn't exist
+  }
+
+  return sizes;
 }
 
 /**
