@@ -2,7 +2,7 @@ import { spawn } from "child_process";
 import path from "path";
 import { fileURLToPath } from "url";
 import type { Job } from "@mapthew/shared/types";
-import { getClaudeModel, getConfig } from "@mapthew/shared/config";
+import { getConfig } from "@mapthew/shared/config";
 import { buildPrompt } from "./prompt.js";
 import { getReadableId } from "./utils.js";
 
@@ -92,10 +92,10 @@ export async function invokeClaudeCode(
 ): Promise<{ success: boolean; output: string; error?: string }> {
   const { hasSession = false } = options;
   const prompt = await buildPrompt(job);
-  const model = await getClaudeModel();
-  const timeoutMs = getTimeoutMs();
   const config = await getConfig();
+  const model = config.claudeModel;
   const maxBytes = config.maxOutputBufferBytes;
+  const timeoutMs = getTimeoutMs();
 
   return new Promise((resolve) => {
     // Build args based on whether we're resuming a session
