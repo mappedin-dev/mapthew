@@ -25,8 +25,6 @@ export interface SessionInfo {
   createdAt: Date;
   lastUsed: Date;
   hasSession: boolean;
-  sizeBytes: number;
-  workspaceSizeBytes: number;
 }
 
 /**
@@ -331,8 +329,6 @@ export async function listSessions(): Promise<SessionInfo[]> {
         createdAt,
         lastUsed,
         hasSession,
-        sizeBytes: 0,
-        workspaceSizeBytes: 0,
       });
     }
 

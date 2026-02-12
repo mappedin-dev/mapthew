@@ -141,8 +141,9 @@ export default function Sessions() {
     }
   }
 
+  const activeKeys = new Set(sessions.map((s) => s.issueKey));
   const activeSizes = sizesData
-    ? sizesData.sizes.filter((s) => sessions.some((sess) => sess.issueKey === s.issueKey))
+    ? sizesData.sizes.filter((s) => activeKeys.has(s.issueKey))
     : [];
   const totalSessionSizeMB = activeSizes.reduce((sum, s) => sum + s.sizeMB, 0);
   const totalWorkspaceSizeMB = activeSizes.reduce((sum, s) => sum + s.workspaceSizeMB, 0);

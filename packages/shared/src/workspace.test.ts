@@ -370,7 +370,7 @@ describe("workspace", () => {
       expect(sessions[1].hasSession).toBe(true);
     });
 
-    it("returns zero for size fields (sizes loaded separately)", async () => {
+    it("does not include size fields (sizes loaded separately via getSessionSizes)", async () => {
       const ws = path.join(testWorkspacesDir, "DXTR-SIZE");
       await fs.mkdir(ws, { recursive: true });
 
@@ -379,8 +379,8 @@ describe("workspace", () => {
 
       const sessions = await listSessions();
 
-      expect(sessions[0].sizeBytes).toBe(0);
-      expect(sessions[0].workspaceSizeBytes).toBe(0);
+      expect(sessions[0]).not.toHaveProperty("sizeBytes");
+      expect(sessions[0]).not.toHaveProperty("workspaceSizeBytes");
     });
   });
 
