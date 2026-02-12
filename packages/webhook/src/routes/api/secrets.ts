@@ -1,46 +1,60 @@
 import { Router } from "express";
-import type { SecretsStatus } from "@mapthew/shared/types";
-import {
-  JIRA_EMAIL,
-  JIRA_API_TOKEN,
-  JIRA_WEBHOOK_SECRET,
-  GITHUB_TOKEN,
-  GITHUB_WEBHOOK_SECRET,
-  FIGMA_API_KEY,
-} from "../../config.js";
+import type { SecretKey } from "@mapthew/shared/types";
+import { SECRET_KEYS } from "@mapthew/shared/secrets";
+import { secretsManager } from "../../config.js";
 
 const router: Router = Router();
 
-/**
- * Mask a secret string, revealing only a safe portion
- * - Empty/undefined: returns ""
- * - < 12 chars: returns "****" (too short to safely reveal)
- * - 12-20 chars: shows first 2 and last 2
- * - > 20 chars: shows first 4 and last 4
- */
-function maskSecret(secret: string | undefined): string {
-  if (!secret) return "";
-  if (secret.length < 12) return "******";
-  return `${secret.slice(0, 2)}******${secret.slice(-2)}`;
-}
+// GET /api/secrets — return masked secrets
+router.get("/", async (_req, res) => {
+  try {
+    const masked = await secretsManager.getMasked();
+    res.json(masked);
+  } catch (error) {
+    console.error("Error fetching secrets:", error);
+    res.status(500).json({ error: "Failed to fetch secrets" });
+  }
+});
 
-// GET /api/secrets
-router.get("/", (_req, res) => {
-  const secrets: SecretsStatus = {
-    jira: {
-      email: JIRA_EMAIL ?? "",
-      tokenMasked: maskSecret(JIRA_API_TOKEN),
-      webhookSecretMasked: maskSecret(JIRA_WEBHOOK_SECRET),
-    },
-    github: {
-      tokenMasked: maskSecret(GITHUB_TOKEN),
-      webhookSecretMasked: maskSecret(GITHUB_WEBHOOK_SECRET),
-    },
-    figma: {
-      apiKeyMasked: maskSecret(FIGMA_API_KEY),
-    },
-  };
-  res.json(secrets);
+// PUT /api/secrets — set a secret
+router.put("/", async (req, res) => {
+  try {
+    const { key, value } = req.body as { key: string; value: string };
+
+    if (!key || !value) {
+      res.status(400).json({ error: "key and value are required" });
+      return;
+    }
+
+    if (!SECRET_KEYS[key as SecretKey]) {
+      res.status(400).json({ error: `Invalid secret key: ${key}` });
+      return;
+    }
+
+    await secretsManager.set(key as SecretKey, value);
+    res.json({ success: true });
+  } catch (error) {
+    console.error("Error setting secret:", error);
+    res.status(500).json({ error: "Failed to set secret" });
+  }
+});
+
+// DELETE /api/secrets/:key — delete a secret
+router.delete("/:key", async (req, res) => {
+  try {
+    const { key } = req.params;
+
+    if (!SECRET_KEYS[key as SecretKey]) {
+      res.status(400).json({ error: `Invalid secret key: ${key}` });
+      return;
+    }
+
+    await secretsManager.delete(key as SecretKey);
+    res.json({ success: true });
+  } catch (error) {
+    console.error("Error deleting secret:", error);
+    res.status(500).json({ error: "Failed to delete secret" });
+  }
 });
 
 export default router;

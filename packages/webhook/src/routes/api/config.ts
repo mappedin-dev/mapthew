@@ -1,7 +1,6 @@
 import { Router } from "express";
 import { getConfig, saveConfig } from "@mapthew/shared/config";
 import { CLAUDE_MODELS } from "@mapthew/shared/constants";
-import { isValidJiraUrl } from "@mapthew/shared/utils";
 import type { AppConfig } from "@mapthew/shared/types";
 
 const router: Router = Router();
@@ -21,7 +20,7 @@ router.get("/", async (_req, res) => {
 router.put("/", async (req, res) => {
   try {
     const {
-      botName, claudeModel, jiraBaseUrl,
+      botName, claudeModel,
       maxSessions, pruneThresholdDays, pruneIntervalDays,
     } = req.body as Partial<AppConfig>;
     const config = await getConfig();
@@ -42,16 +41,6 @@ router.put("/", async (req, res) => {
         return;
       }
       config.claudeModel = claudeModel;
-    }
-
-    if (jiraBaseUrl !== undefined) {
-      if (!isValidJiraUrl(jiraBaseUrl)) {
-        res.status(400).json({
-          error: "Invalid JIRA base URL. Must be a valid HTTPS URL.",
-        });
-        return;
-      }
-      config.jiraBaseUrl = jiraBaseUrl;
     }
 
     if (maxSessions !== undefined) {
@@ -79,7 +68,7 @@ router.put("/", async (req, res) => {
     }
 
     await saveConfig(config);
-    console.log(`Config updated: botName=${config.botName}, claudeModel=${config.claudeModel}, jiraBaseUrl=${config.jiraBaseUrl}`);
+    console.log(`Config updated: botName=${config.botName}, claudeModel=${config.claudeModel}`);
 
     const updatedConfig: AppConfig = await getConfig();
     res.json(updatedConfig);

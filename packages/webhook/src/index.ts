@@ -1,7 +1,15 @@
 import path from "path";
 import { fileURLToPath } from "url";
 import express, { type Request, type Response } from "express";
-import { PORT, REDIS_URL, VERBOSE_LOGS } from "./config.js";
+import {
+  PORT,
+  REDIS_URL,
+  VERBOSE_LOGS,
+  secretsManager,
+  AZURE_KEYVAULT_URL,
+  AZURE_IDENTITY_ENDPOINT,
+  AZURE_IDENTITY_HEADER,
+} from "./config.js";
 import { getBotName } from "@mapthew/shared/utils";
 import { initConfigStore, getConfig } from "@mapthew/shared/config";
 import type { RequestWithRawBody } from "./middleware/index.js";
@@ -52,9 +60,18 @@ app.get("/health", (_req, res) => {
   res.json({ status: "ok" });
 });
 
-// Start server
-app.listen(PORT, () => {
-  console.log(`Webhook server listening on port ${PORT}`);
-  console.log(`  Listening as: @${getBotName()}`);
-  if (VERBOSE_LOGS) console.log(`  Verbose logging enabled`);
-});
+// Initialize secrets manager and start server
+(async () => {
+  // Initialize secrets manager (connects to vault, seeds from env, populates cache)
+  await secretsManager.init({
+    vaultUrl: AZURE_KEYVAULT_URL!,
+    identityEndpoint: AZURE_IDENTITY_ENDPOINT!,
+    identityHeader: AZURE_IDENTITY_HEADER!,
+  });
+
+  app.listen(PORT, () => {
+    console.log(`Webhook server listening on port ${PORT}`);
+    console.log(`  Listening as: @${getBotName()}`);
+    if (VERBOSE_LOGS) console.log(`  Verbose logging enabled`);
+  });
+})();

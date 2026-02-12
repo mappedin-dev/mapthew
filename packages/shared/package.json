@@ -35,6 +35,10 @@
     "./workspace": {
       "import": "./dist/workspace.js",
       "types": "./dist/workspace.d.ts"
+    },
+    "./secrets": {
+      "import": "./dist/secrets.js",
+      "types": "./dist/secrets.d.ts"
     }
   },
   "scripts": {
@@ -44,6 +48,7 @@
     "test:watch": "vitest"
   },
   "dependencies": {
+    "@azure/keyvault-secrets": "^4.9.0",
     "bullmq": "^5.0.0",
     "ioredis": "^5.4.0"
   },

@@ -7,10 +7,24 @@ const mockQueue = vi.hoisted(() => ({
   add: vi.fn().mockResolvedValue({ id: "job-123" }),
 }));
 
+const mockSecrets: Record<string, string> = {
+  githubToken: "mock-github-token",
+  githubWebhookSecret: "mock-github-webhook-secret",
+};
+
+const mockSecretsManager = vi.hoisted(() => ({
+  get: vi.fn().mockImplementation(async (key: string) => mockSecrets[key]),
+  getMany: vi.fn().mockImplementation(async (keys: string[]) => {
+    const result: Record<string, string | undefined> = {};
+    for (const key of keys) result[key] = mockSecrets[key];
+    return result;
+  }),
+}));
+
 // Mock config module
 vi.mock("../config.js", () => ({
   queue: mockQueue,
-  GITHUB_TOKEN: "mock-github-token",
+  secretsManager: mockSecretsManager,
   VERBOSE_LOGS: false,
 }));
 

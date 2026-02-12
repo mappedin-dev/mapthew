@@ -12,7 +12,7 @@ import {
   getBotName,
 } from "@mapthew/shared/utils";
 import { postGitHubComment, fetchGitHubPRDetails } from "@mapthew/shared/api";
-import { queue, GITHUB_TOKEN, VERBOSE_LOGS } from "../config.js";
+import { queue, VERBOSE_LOGS, secretsManager } from "../config.js";
 import { githubWebhookAuth } from "../middleware/index.js";
 
 const router: Router = Router();
@@ -37,8 +37,9 @@ async function queueGitHubJob(
   );
 
   try {
+    const githubToken = await secretsManager.get("githubToken") || "";
     await postGitHubComment(
-      GITHUB_TOKEN,
+      githubToken,
       job.owner,
       job.repo,
       commentNumber,
@@ -169,8 +170,9 @@ router.post("/", githubWebhookAuth, async (req, res) => {
     // Fetch PR details to get the branch name for session linking (only for PRs)
     let branchName: string | undefined;
     if (isPR) {
+      const githubToken = await secretsManager.get("githubToken") || "";
       const prDetails = await fetchGitHubPRDetails(
-        GITHUB_TOKEN,
+        githubToken,
         owner,
         repo,
         number,

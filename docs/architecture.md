@@ -33,6 +33,8 @@ flowchart TD
         K[Figma API]
     end
 
+    V[("Key Vault")]
+
     A -->|/webhook/jira| B
     G -->|/webhook/github| B
     ADMIN -->|POST /api/queue/jobs| B
@@ -44,6 +46,8 @@ flowchart TD
     D -->|generate code| I
 
     B -->|read/write| C
+    B -->|read/write secrets| V
+    D -->|read secrets| V
 ```
 
 ### End-to-End Example
@@ -240,8 +244,84 @@ Admin jobs are created directly from the dashboard without external triggers. Th
 | **Figma API Key**         | Figma MCP (fetch design data)      | Read-only access             |
 | **Anthropic API Key**     | Claude Code CLI access             | Enterprise tier recommended  |
 
-> MCP servers and Git CLI authenticate via environment variables (`JIRA_API_TOKEN`, `GITHUB_TOKEN`, `FIGMA_API_KEY`).
-> Webhook secrets are optional but recommended for production deployments.
+> All integration secrets above are stored in **Key Vault** and managed via the dashboard. See [Secrets Management](#secrets-management) below.
+> On first startup, secrets can be seeded from env vars into Key Vault; after that, the vault is the single source of truth.
+
+---
+
+## Secrets Management
+
+Integration secrets (JIRA, GitHub, Figma, Anthropic) are stored in a Key Vault and managed from the admin dashboard. The application uses the Azure Key Vault REST API as a universal interface -- the same `@azure/keyvault-secrets` client code works in all environments:
+
+- **Production:** Azure Key Vault (encrypted at rest, RBAC, audit logs) with managed identity
+- **Local dev:** [Lowkey Vault](https://github.com/nagyesta/lowkey-vault) -- an open-source Azure Key Vault API-compatible emulator running as a Docker container
+
+### Architecture
+
+```mermaid
+flowchart LR
+    subgraph dashboard [Dashboard]
+        UI["Settings Page"]
+    end
+    subgraph webhook [Webhook Server]
+        API["PUT/GET/DELETE /api/secrets"]
+        MW["Webhook Middleware"]
+    end
+    subgraph worker [Worker]
+        WK["Job Processor"]
+    end
+    subgraph shared [Shared Package]
+        SM["SecretsManager"]
+        SC["Azure SecretClient"]
+    end
+    subgraph vault [Key Vault API]
+        AKV["Azure Key Vault OR Lowkey Vault"]
+    end
+
+    UI -->|"Auth0 JWT"| API
+    API --> SM
+    MW --> SM
+    WK --> SM
+    SM --> SC
+    SC --> AKV
+```
+
+`SecretsManager` (in `@mapthew/shared`) wraps `SecretClient` with a custom `VaultCredential` that authenticates via the managed identity token endpoint. Auth uses three env vars, same names in all environments:
+
+### Environment Variables
+
+| Variable                  | Purpose                         |
+| ------------------------- | ------------------------------- |
+| `AZURE_KEYVAULT_URL`      | Vault URL (required)            |
+| `AZURE_IDENTITY_ENDPOINT` | Managed identity token endpoint |
+| `AZURE_IDENTITY_HEADER`   | Managed identity auth header    |
+
+### Stored Secrets
+
+| Vault Key               | Seeded From (.env)      |
+| ----------------------- | ----------------------- |
+| `jira-email`            | `JIRA_EMAIL`            |
+| `jira-api-token`        | `JIRA_API_TOKEN`        |
+| `jira-webhook-secret`   | `JIRA_WEBHOOK_SECRET`   |
+| `github-token`          | `GITHUB_TOKEN`          |
+| `github-webhook-secret` | `GITHUB_WEBHOOK_SECRET` |
+| `figma-api-key`         | `FIGMA_API_KEY`         |
+| `anthropic-api-key`     | `ANTHROPIC_API_KEY`     |
+
+### Startup Seed Flow
+
+On first startup, for each managed secret: if the vault entry is empty and the corresponding env var is set, the env var value is written into the vault. After seeding, env vars are ignored -- the vault is the only source of truth.
+
+### Read/Write Modes
+
+- **Webhook server:** `readOnly: false` -- reads, writes, deletes, and runs seed logic
+- **Worker:** `readOnly: true` -- read-only access, no seeding, no writes
+
+### Local Dev
+
+Lowkey Vault runs as a Docker Compose service alongside Redis. It serves HTTPS on port 8443 (vault API) and HTTP on port 8080 (token endpoint). `NODE_TLS_REJECT_UNAUTHORIZED=0` is set on webhook/worker containers for the self-signed cert.
+
+> See [`docs/key-vault-secrets.md`](./key-vault-secrets.md) for full implementation details.
 
 ---
 
@@ -279,19 +359,19 @@ flowchart TD
 
 ### Environment Variables
 
-| Variable                   | Purpose                                         | Default                        |
-| -------------------------- | ----------------------------------------------- | ------------------------------ |
-| `WORKSPACES_DIR`           | Root directory for workspaces                   | `/tmp/{botName}-workspaces`    |
-| `MAX_SESSIONS`             | Soft cap — oldest session evicted when exceeded  | `5`                            |
-| `PRUNE_THRESHOLD_DAYS`     | Sessions inactive longer than this are pruned    | `7`                            |
-| `PRUNE_INTERVAL_DAYS`      | How often the pruning job runs                   | `7` (weekly)                   |
+| Variable               | Purpose                                         | Default                     |
+| ---------------------- | ----------------------------------------------- | --------------------------- |
+| `WORKSPACES_DIR`       | Root directory for workspaces                   | `/tmp/{botName}-workspaces` |
+| `MAX_SESSIONS`         | Soft cap — oldest session evicted when exceeded | `5`                         |
+| `PRUNE_THRESHOLD_DAYS` | Sessions inactive longer than this are pruned   | `7`                         |
+| `PRUNE_INTERVAL_DAYS`  | How often the pruning job runs                  | `7` (weekly)                |
 
 ### Docker Volumes
 
-| Volume               | Mount Point                    | Purpose                        |
-| -------------------- | ------------------------------ | ------------------------------ |
-| `mapthew-workspaces` | `/tmp/mapthew-workspaces`      | Workspace directories          |
-| `claude-sessions`    | `/home/worker/.claude`         | Claude CLI session data        |
+| Volume               | Mount Point               | Purpose                 |
+| -------------------- | ------------------------- | ----------------------- |
+| `mapthew-workspaces` | `/tmp/mapthew-workspaces` | Workspace directories   |
+| `claude-sessions`    | `/home/worker/.claude`    | Claude CLI session data |
 
 ---
 
@@ -312,18 +392,22 @@ flowchart LR
         API_Q["/api/queues — Queue Status"]
         API_C["/api/config — Configuration"]
         API_S["/api/sessions — Session Management"]
+        API_SEC["/api/secrets — Secrets Management"]
     end
 
     subgraph Storage
         REDIS[("Redis")]
+        KV[("Key Vault")]
     end
 
     UI -->|fetch| API_Q
     UI -->|fetch| API_C
     UI -->|fetch| API_S
+    UI -->|fetch| API_SEC
     API_Q -->|read jobs| REDIS
     API_C -->|read/write| REDIS
     API_S -->|read/cleanup| WORKSPACES[("Workspaces")]
+    API_SEC -->|read/write| KV
     STATIC -->|serves| UI
 ```
 

@@ -37,7 +37,7 @@
     "viewTasks": "Tasks",
     "viewTasksDescription": "See what I'm working on",
     "sessions": "Sessions",
-    "sessionsDescription": "Active context sessions",
+    "sessionsDescription": "Track what I'm thinking about",
     "settings": "Settings",
     "settingsDescription": "Manage how I work"
   },
@@ -130,7 +130,10 @@
         "apiKey": "API Key"
       },
       "notConfigured": "Not configured",
-      "notEditable": "Must be set as an environment variable"
+      "editSecret": "Edit secret",
+      "deleteSecret": "Clear secret",
+      "saveSecret": "Save",
+      "cancelEdit": "Cancel"
     },
     "version": "Version {{version}}"
   },

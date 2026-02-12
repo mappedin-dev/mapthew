@@ -1,16 +1,23 @@
 import type { Request, Response, NextFunction } from "express";
 import { verifyHmacSignature } from "@mapthew/shared/api";
-import { JIRA_WEBHOOK_SECRET } from "../config.js";
+import { secretsManager } from "../config.js";
 import type { RequestWithRawBody } from "./index.js";
 
 /**
  * Middleware to verify JIRA webhook signature
  */
-export function jiraWebhookAuth(
+export async function jiraWebhookAuth(
   req: Request,
   res: Response,
   next: NextFunction
-): void {
+): Promise<void> {
+  const webhookSecret = await secretsManager.get("jiraWebhookSecret");
+  if (!webhookSecret) {
+    console.warn("JIRA webhook secret not configured — rejecting request");
+    res.status(503).json({ error: "Webhook secret not configured" });
+    return;
+  }
+
   const signature =
     (req.headers["x-hub-signature-256"] as string) ||
     (req.headers["x-hub-signature"] as string);
@@ -28,7 +35,7 @@ export function jiraWebhookAuth(
     return;
   }
 
-  if (!verifyHmacSignature(JIRA_WEBHOOK_SECRET!, rawBody, signature)) {
+  if (!verifyHmacSignature(webhookSecret, rawBody, signature)) {
     console.warn("Invalid JIRA webhook signature");
     res.status(401).json({ error: "Invalid webhook signature" });
     return;

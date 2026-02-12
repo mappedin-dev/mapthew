@@ -1,6 +1,6 @@
 import type { Redis } from "ioredis";
 import type { ClaudeModel, AppConfig } from "./types.js";
-import { getBotName, isValidBotName, isValidJiraUrl, setBotName } from "./utils.js";
+import { getBotName, isValidBotName, setBotName } from "./utils.js";
 
 let redisClient: Redis | null = null;
 
@@ -14,7 +14,6 @@ function getDefaultConfig(): AppConfig {
   return {
     botName: process.env.BOT_NAME ?? "mapthew",
     claudeModel: (process.env.CLAUDE_MODEL as ClaudeModel) ?? "claude-sonnet-4-5",
-    jiraBaseUrl: process.env.JIRA_BASE_URL ?? "",
     maxSessions: parseInt(process.env.MAX_SESSIONS || "5", 10),
     pruneThresholdDays: parseInt(process.env.PRUNE_THRESHOLD_DAYS || "7", 10),
     pruneIntervalDays: parseInt(process.env.PRUNE_INTERVAL_DAYS || "7", 10),
@@ -69,12 +68,6 @@ export async function saveConfig(config: AppConfig): Promise<void> {
   if (!isValidBotName(config.botName)) {
     throw new Error(
       `Invalid bot name "${config.botName}" - must be lowercase alphanumeric with dashes/underscores, starting with alphanumeric (max 32 chars)`
-    );
-  }
-
-  if (!isValidJiraUrl(config.jiraBaseUrl)) {
-    throw new Error(
-      `Invalid JIRA base URL "${config.jiraBaseUrl}" - must be a valid HTTPS URL`
     );
   }
 

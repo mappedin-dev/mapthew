@@ -2,25 +2,26 @@
 # Compute HMAC-SHA256 signature for webhook testing
 # Usage: ./scripts/sign-webhook.sh [json-file]
 #
-# Reads JIRA_WEBHOOK_SECRET from .env and writes REQUESTS_HTTP_JIRA_WEBHOOK_SIGNATURE back to .env
+# Reads JIRA_WEBHOOK_SECRET from .env.local and writes REQUESTS_HTTP_JIRA_WEBHOOK_SIGNATURE to .env
 
 set -e
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT_DIR="$(dirname "$SCRIPT_DIR")"
+SECRETS_FILE="$ROOT_DIR/.env.local"
 ENV_FILE="$ROOT_DIR/.env"
 OUTPUT_VAR="REQUESTS_HTTP_JIRA_WEBHOOK_SIGNATURE"
 
-# Load .env
-if [ ! -f "$ENV_FILE" ]; then
-  echo "Error: .env file not found at $ENV_FILE"
+# Load secrets from .env.local
+if [ ! -f "$SECRETS_FILE" ]; then
+  echo "Error: .env.local file not found at $SECRETS_FILE"
   exit 1
 fi
 
-source "$ENV_FILE"
+source "$SECRETS_FILE"
 
 if [ -z "$JIRA_WEBHOOK_SECRET" ]; then
-  echo "Error: JIRA_WEBHOOK_SECRET not set in .env"
+  echo "Error: JIRA_WEBHOOK_SECRET not set in .env.local"
   exit 1
 fi
 

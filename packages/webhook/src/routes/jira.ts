@@ -2,7 +2,7 @@ import { Router } from "express";
 import type { JiraJob, WebhookPayload } from "@mapthew/shared/types";
 import { isCommentCreatedEvent, extractBotInstruction, getBotName } from "@mapthew/shared/utils";
 import { postJiraComment } from "@mapthew/shared/api";
-import { queue, jiraCredentials, VERBOSE_LOGS } from "../config.js";
+import { queue, VERBOSE_LOGS, secretsManager } from "../config.js";
 import { jiraWebhookAuth } from "../middleware/index.js";
 
 const router: Router = Router();
@@ -59,6 +59,14 @@ router.post("/", jiraWebhookAuth, async (req, res) => {
 
     console.log(`Job queued for ${job.issueKey}: ${job.instruction}`);
 
+    const { jiraBaseUrl, jiraEmail, jiraApiToken } = await secretsManager.getMany([
+      "jiraBaseUrl", "jiraEmail", "jiraApiToken",
+    ]);
+    const jiraCredentials = {
+      baseUrl: jiraBaseUrl || "",
+      email: jiraEmail || "",
+      apiToken: jiraApiToken || "",
+    };
     await postJiraComment(jiraCredentials, job.issueKey, "🤓 Okie dokie!");
 
     return res.status(200).json({ status: "queued", issueKey: job.issueKey });

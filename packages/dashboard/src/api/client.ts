@@ -114,8 +114,19 @@ export const api = {
       body: JSON.stringify(config),
     }),
 
-  // Secrets endpoint (read-only)
+  // Secrets endpoints
   getSecrets: () => fetchJSON<SecretsStatus>("/secrets"),
+
+  updateSecret: (key: string, value: string) =>
+    fetchJSON<{ success: boolean }>("/secrets", {
+      method: "PUT",
+      body: JSON.stringify({ key, value }),
+    }),
+
+  deleteSecret: (key: string) =>
+    fetchJSON<{ success: boolean }>(`/secrets/${encodeURIComponent(key)}`, {
+      method: "DELETE",
+    }),
 
   // Sessions endpoints
   getSessions: () =>

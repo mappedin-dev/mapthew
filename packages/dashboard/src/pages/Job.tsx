@@ -21,9 +21,9 @@ export default function Job() {
     enabled: !!id,
   });
 
-  const { data: config } = useQuery({
-    queryKey: ["config"],
-    queryFn: api.getConfig,
+  const { data: secrets } = useQuery({
+    queryKey: ["secrets"],
+    queryFn: api.getSecrets,
   });
 
   const retryMutation = useMutation({
@@ -90,8 +90,9 @@ export default function Job() {
     ? jobData.jiraIssueKey 
     : null;
   
-  const jiraUrl = jiraIssueKey && config?.jiraBaseUrl 
-    ? `${config.jiraBaseUrl.replace(/\/$/, '')}/browse/${jiraIssueKey}`
+  const jiraBaseUrl = secrets?.jira.baseUrl;
+  const jiraUrl = jiraIssueKey && jiraBaseUrl
+    ? `${jiraBaseUrl.replace(/\/$/, '')}/browse/${jiraIssueKey}`
     : null;
   
   // Extract GitHub info from job data

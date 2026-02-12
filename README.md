@@ -99,11 +99,15 @@ Point to `/webhook/github` and enable these events:
    pnpm install
    ```
 
-2. Copy the example environment file and fill in your credentials:
+2. Copy the example environment files:
 
    ```bash
    cp .env.example .env
+   cp .env.local.example .env.local
    ```
+
+   - `.env` — application config (ports, Auth0, JIRA base URL, etc.)
+   - `.env.local` — optional development only configurations
 
 3. Start the services:
 
@@ -111,7 +115,7 @@ Point to `/webhook/github` and enable these events:
    pnpm dev
    ```
 
-   This runs Redis, the webhook server, and the worker via Docker Compose.
+   This starts all services via Docker Compose. A `vault-init` container automatically seeds Lowkey Vault from `.env.local`.
 
    To rebuild without clearing data (preserves Redis config and workspaces):
 

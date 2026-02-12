@@ -1,16 +1,23 @@
 import type { Request, Response, NextFunction } from "express";
 import { verifyHmacSignature } from "@mapthew/shared/api";
-import { GITHUB_WEBHOOK_SECRET } from "../config.js";
+import { secretsManager } from "../config.js";
 import type { RequestWithRawBody } from "./index.js";
 
 /**
  * Middleware to verify GitHub webhook signature
  */
-export function githubWebhookAuth(
+export async function githubWebhookAuth(
   req: Request,
   res: Response,
   next: NextFunction
-): void {
+): Promise<void> {
+  const webhookSecret = await secretsManager.get("githubWebhookSecret");
+  if (!webhookSecret) {
+    console.warn("GitHub webhook secret not configured — rejecting request");
+    res.status(503).json({ error: "Webhook secret not configured" });
+    return;
+  }
+
   const signature = req.headers["x-hub-signature-256"] as string;
 
   if (!signature) {
@@ -26,7 +33,7 @@ export function githubWebhookAuth(
     return;
   }
 
-  if (!verifyHmacSignature(GITHUB_WEBHOOK_SECRET!, rawBody, signature)) {
+  if (!verifyHmacSignature(webhookSecret, rawBody, signature)) {
     console.warn("Invalid GitHub webhook signature");
     res.status(401).json({ error: "Invalid webhook signature" });
     return;

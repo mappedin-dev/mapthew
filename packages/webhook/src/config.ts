@@ -1,27 +1,27 @@
 import { createQueue, Queue } from "@mapthew/shared/queue";
+import { SecretsManager } from "@mapthew/shared/secrets";
 import type { Job } from "@mapthew/shared/types";
 
 export const PORT = process.env.PORT || 3000;
 export const REDIS_URL = process.env.REDIS_URL || "redis://localhost:6379";
-export const JIRA_BASE_URL = process.env.JIRA_BASE_URL || "";
-export const JIRA_EMAIL = process.env.JIRA_EMAIL || "";
-export const JIRA_API_TOKEN = process.env.JIRA_API_TOKEN || "";
-export const JIRA_WEBHOOK_SECRET = process.env.JIRA_WEBHOOK_SECRET;
-export const GITHUB_WEBHOOK_SECRET = process.env.GITHUB_WEBHOOK_SECRET;
-export const GITHUB_TOKEN = process.env.GITHUB_TOKEN || "";
-export const FIGMA_API_KEY = process.env.FIGMA_API_KEY || "";
 export const VERBOSE_LOGS = process.env.VERBOSE_LOGS === "true";
 
 // Auth0 - required
 export const AUTH0_DOMAIN = process.env.AUTH0_DOMAIN;
 export const AUTH0_AUDIENCE = process.env.AUTH0_AUDIENCE;
 
+// Azure Key Vault - required
+export const AZURE_KEYVAULT_URL = process.env.AZURE_KEYVAULT_URL;
+export const AZURE_IDENTITY_ENDPOINT = process.env.AZURE_IDENTITY_ENDPOINT;
+export const AZURE_IDENTITY_HEADER = process.env.AZURE_IDENTITY_HEADER;
+
 // Validate required configuration
 const missing: string[] = [];
 if (!AUTH0_DOMAIN) missing.push("AUTH0_DOMAIN");
 if (!AUTH0_AUDIENCE) missing.push("AUTH0_AUDIENCE");
-if (!JIRA_WEBHOOK_SECRET) missing.push("JIRA_WEBHOOK_SECRET");
-if (!GITHUB_WEBHOOK_SECRET) missing.push("GITHUB_WEBHOOK_SECRET");
+if (!AZURE_KEYVAULT_URL) missing.push("AZURE_KEYVAULT_URL");
+if (!AZURE_IDENTITY_ENDPOINT) missing.push("AZURE_IDENTITY_ENDPOINT");
+if (!AZURE_IDENTITY_HEADER) missing.push("AZURE_IDENTITY_HEADER");
 
 if (missing.length > 0) {
   console.error("Missing required configuration:");
@@ -29,10 +29,6 @@ if (missing.length > 0) {
   process.exit(1);
 }
 
-export const jiraCredentials = {
-  baseUrl: JIRA_BASE_URL,
-  email: JIRA_EMAIL,
-  apiToken: JIRA_API_TOKEN,
-};
+export const secretsManager = new SecretsManager({ readOnly: false });
 
 export const queue: Queue<Job> = createQueue(REDIS_URL);

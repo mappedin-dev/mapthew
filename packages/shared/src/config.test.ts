@@ -25,7 +25,6 @@ describe("config persistence with Redis", () => {
     await saveConfig({
       botName: "persistbot",
       claudeModel: "claude-sonnet-4-5",
-      jiraBaseUrl: "https://test.atlassian.net",
       maxSessions: 10,
       pruneThresholdDays: 14,
       pruneIntervalDays: 1,
@@ -34,7 +33,6 @@ describe("config persistence with Redis", () => {
     const config = await getConfig();
     expect(config.botName).toBe("persistbot");
     expect(config.claudeModel).toBe("claude-sonnet-4-5");
-    expect(config.jiraBaseUrl).toBe("https://test.atlassian.net");
     expect(config.maxSessions).toBe(10);
     expect(config.pruneThresholdDays).toBe(14);
     expect(config.pruneIntervalDays).toBe(1);
@@ -45,20 +43,6 @@ describe("config persistence with Redis", () => {
       saveConfig({
         botName: "Invalid-Name",
         claudeModel: "claude-sonnet-4-5",
-        jiraBaseUrl: "",
-        maxSessions: 5,
-        pruneThresholdDays: 7,
-        pruneIntervalDays: 7,
-      })
-    ).rejects.toThrow();
-  });
-
-  it("throws on invalid JIRA URL during save", async () => {
-    await expect(
-      saveConfig({
-        botName: "validbot",
-        claudeModel: "claude-sonnet-4-5",
-        jiraBaseUrl: "http://not-https.com",
         maxSessions: 5,
         pruneThresholdDays: 7,
         pruneIntervalDays: 7,
@@ -85,7 +69,6 @@ describe("getClaudeModel", () => {
     await saveConfig({
       botName: "mapthew",
       claudeModel: "claude-haiku-4-5",
-      jiraBaseUrl: "",
       maxSessions: 5,
       pruneThresholdDays: 7,
       pruneIntervalDays: 7,

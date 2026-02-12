@@ -7,14 +7,25 @@ const mockQueue = vi.hoisted(() => ({
   add: vi.fn().mockResolvedValue({ id: "job-123" }),
 }));
 
+const mockSecrets: Record<string, string> = {
+  jiraBaseUrl: "https://test.atlassian.net",
+  jiraEmail: "test@example.com",
+  jiraApiToken: "mock-token",
+};
+
+const mockSecretsManager = vi.hoisted(() => ({
+  get: vi.fn().mockImplementation(async (key: string) => mockSecrets[key]),
+  getMany: vi.fn().mockImplementation(async (keys: string[]) => {
+    const result: Record<string, string | undefined> = {};
+    for (const key of keys) result[key] = mockSecrets[key];
+    return result;
+  }),
+}));
+
 // Mock config module
 vi.mock("../config.js", () => ({
   queue: mockQueue,
-  jiraCredentials: {
-    baseUrl: "https://test.atlassian.net",
-    email: "test@example.com",
-    apiToken: "mock-token",
-  },
+  secretsManager: mockSecretsManager,
   VERBOSE_LOGS: false,
 }));
 
