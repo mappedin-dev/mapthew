@@ -508,11 +508,11 @@ describe("getLabelTrigger", () => {
     expect(getLabelTrigger({ jiraLabelTrigger: "claude-ready" })).toBe("claude-ready");
   });
 
-  it("returns empty string when no config provided", () => {
-    expect(getLabelTrigger()).toBe("");
+  it("returns default 'claude-ready' when no config provided", () => {
+    expect(getLabelTrigger()).toBe("claude-ready");
   });
 
-  it("returns empty string when config has no jiraLabelTrigger", () => {
-    expect(getLabelTrigger({})).toBe("");
+  it("returns default 'claude-ready' when config has no jiraLabelTrigger", () => {
+    expect(getLabelTrigger({})).toBe("claude-ready");
   });
 });

@@ -197,14 +197,14 @@ export function wasLabelAdded(
  * Get the configured JIRA label trigger from AppConfig.
  */
 export function getLabelTrigger(config?: { jiraLabelTrigger?: string }): string {
-  return config?.jiraLabelTrigger ?? "";
+  return config?.jiraLabelTrigger ?? "claude-ready";
 }
 
 /**
  * Get the configured JIRA label to add after processing from AppConfig.
  */
 export function getLabelAdd(config?: { jiraLabelAdd?: string }): string {
-  return config?.jiraLabelAdd ?? "";
+  return config?.jiraLabelAdd ?? "claude-processed";
 }
 
 /**
