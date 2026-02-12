@@ -45,6 +45,7 @@ Use Mapthew to update an open PR in GitHub.
 
 ## Prerequisites
 
+- [Node.js](https://nodejs.org/) (v22+)
 - [Docker](https://www.docker.com/) and Docker Compose
 - [pnpm](https://pnpm.io/) (v9.15+)
 
