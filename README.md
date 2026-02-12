@@ -57,6 +57,7 @@ Use Mapthew to update an open PR in GitHub.
 | **MAX_SESSIONS**             | Soft cap — oldest session evicted when exceeded            | `5`                          |
 | **PRUNE_THRESHOLD_DAYS**     | Sessions inactive longer than this are pruned              | `7`                          |
 | **PRUNE_INTERVAL_DAYS**      | How often the pruning job runs                             | `7` (weekly)                 |
+| **CLAUDE_TIMEOUT_MS**        | Timeout for Claude CLI child process (ms)                  | `1800000` (30 min)           |
 
 Set `BOT_NAME` to customize the trigger (e.g., `@mybot` instead of `@mapthew`), branch prefix, and internal identifiers.
 
