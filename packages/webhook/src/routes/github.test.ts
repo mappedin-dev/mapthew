@@ -11,7 +11,6 @@ const mockQueue = vi.hoisted(() => ({
 vi.mock("../config.js", () => ({
   queue: mockQueue,
   GITHUB_TOKEN: "mock-github-token",
-  VERBOSE_LOGS: false,
 }));
 
 // Mock middleware to skip signature verification in tests

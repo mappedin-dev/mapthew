@@ -2,10 +2,12 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import express from "express";
 import request from "supertest";
 
-// Use vi.hoisted to define mock before vi.mock hoisting
+// Use vi.hoisted to define mocks before vi.mock hoisting
 const mockQueue = vi.hoisted(() => ({
   add: vi.fn().mockResolvedValue({ id: "job-123" }),
 }));
+
+const mockGetConfig = vi.hoisted(() => vi.fn());
 
 // Mock config module
 vi.mock("../config.js", () => ({
@@ -15,7 +17,6 @@ vi.mock("../config.js", () => ({
     email: "test@example.com",
     apiToken: "mock-token",
   },
-  VERBOSE_LOGS: false,
 }));
 
 // Mock middleware to skip signature verification in tests
@@ -40,6 +41,10 @@ vi.mock("@mapthew/shared/utils", async () => {
   };
 });
 
+vi.mock("@mapthew/shared/config", () => ({
+  getConfig: mockGetConfig,
+}));
+
 import jiraRouter from "./jira.js";
 import { postJiraComment } from "@mapthew/shared/api";
 
@@ -53,6 +58,11 @@ function createApp() {
 describe("JIRA webhook routes", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockGetConfig.mockResolvedValue({
+      jiraLabelTrigger: "claude-ready",
+      jiraLabelAdd: "claude-processed",
+      verboseLogs: false,
+    });
   });
 
   describe("POST /webhook/jira", () => {
@@ -90,7 +100,7 @@ describe("JIRA webhook routes", () => {
       expect(postJiraComment).toHaveBeenCalled();
     });
 
-    it("ignores non-comment_created events", async () => {
+    it("ignores non-comment_created events when no label trigger configured", async () => {
       const payload = {
         webhookEvent: "comment_updated",
         comment: {
@@ -108,7 +118,7 @@ describe("JIRA webhook routes", () => {
       expect(res.status).toBe(200);
       expect(res.body).toMatchObject({
         status: "ignored",
-        reason: "not a comment_created event",
+        reason: "unhandled event",
       });
       expect(mockQueue.add).not.toHaveBeenCalled();
     });
@@ -153,6 +163,174 @@ describe("JIRA webhook routes", () => {
         "process-ticket",
         expect.objectContaining({
           projectKey: "MYPROJECT",
+        }),
+        expect.any(Object)
+      );
+    });
+  });
+
+  describe("POST /webhook/jira - label trigger", () => {
+    it("queues job when trigger label is added", async () => {
+      const payload = {
+        webhookEvent: "jira:issue_updated",
+        issue: {
+          key: "PROJ-789",
+          fields: { summary: "Test ticket" },
+        },
+        changelog: {
+          items: [
+            {
+              field: "labels",
+              fromString: "bug",
+              toString: "bug claude-ready",
+            },
+          ],
+        },
+        user: { displayName: "Jane Doe" },
+      };
+
+      const app = createApp();
+      const res = await request(app)
+        .post("/webhook/jira")
+        .send(payload);
+
+      expect(res.status).toBe(200);
+      expect(res.body).toMatchObject({
+        status: "queued",
+        issueKey: "PROJ-789",
+      });
+      expect(mockQueue.add).toHaveBeenCalledWith(
+        "process-ticket",
+        expect.objectContaining({
+          source: "jira",
+          issueKey: "PROJ-789",
+          projectKey: "PROJ",
+          instruction: "implement the change described in this ticket",
+          triggeredBy: "Jane Doe",
+        }),
+        expect.any(Object)
+      );
+      expect(postJiraComment).toHaveBeenCalled();
+    });
+
+    it("ignores issue_updated when trigger label is not added", async () => {
+      const payload = {
+        webhookEvent: "jira:issue_updated",
+        issue: { key: "PROJ-789" },
+        changelog: {
+          items: [
+            {
+              field: "labels",
+              fromString: "bug claude-ready",
+              toString: "bug",
+            },
+          ],
+        },
+        user: { displayName: "Jane Doe" },
+      };
+
+      const app = createApp();
+      const res = await request(app)
+        .post("/webhook/jira")
+        .send(payload);
+
+      expect(res.status).toBe(200);
+      expect(res.body.status).toBe("ignored");
+      expect(res.body.reason).toContain("was not added");
+      expect(mockQueue.add).not.toHaveBeenCalled();
+    });
+
+    it("ignores issue_updated when label trigger is explicitly disabled", async () => {
+      mockGetConfig.mockResolvedValue({
+        jiraLabelTrigger: "",
+        jiraLabelAdd: "",
+        verboseLogs: false,
+      });
+
+      const payload = {
+        webhookEvent: "jira:issue_updated",
+        issue: { key: "PROJ-789" },
+        changelog: {
+          items: [
+            {
+              field: "labels",
+              fromString: "",
+              toString: "claude-ready",
+            },
+          ],
+        },
+        user: { displayName: "Jane Doe" },
+      };
+
+      const app = createApp();
+      const res = await request(app)
+        .post("/webhook/jira")
+        .send(payload);
+
+      expect(res.status).toBe(200);
+      expect(res.body.status).toBe("ignored");
+      expect(res.body.reason).toBe("label trigger not configured");
+      expect(mockQueue.add).not.toHaveBeenCalled();
+    });
+
+    it("uses custom label trigger from config", async () => {
+      mockGetConfig.mockResolvedValue({
+        jiraLabelTrigger: "auto-implement",
+        jiraLabelAdd: "claude-processed",
+        verboseLogs: false,
+      });
+
+      const payload = {
+        webhookEvent: "jira:issue_updated",
+        issue: { key: "PROJ-789" },
+        changelog: {
+          items: [
+            {
+              field: "labels",
+              fromString: "",
+              toString: "auto-implement",
+            },
+          ],
+        },
+        user: { displayName: "Jane Doe" },
+      };
+
+      const app = createApp();
+      const res = await request(app)
+        .post("/webhook/jira")
+        .send(payload);
+
+      expect(res.status).toBe(200);
+      expect(res.body.status).toBe("queued");
+      expect(mockQueue.add).toHaveBeenCalled();
+    });
+
+    it("uses 'label-trigger' as triggeredBy when user is not provided", async () => {
+      const payload = {
+        webhookEvent: "jira:issue_updated",
+        issue: { key: "PROJ-100" },
+        changelog: {
+          items: [
+            {
+              field: "labels",
+              fromString: null,
+              toString: "claude-ready",
+            },
+          ],
+        },
+      };
+
+      const app = createApp();
+      const res = await request(app)
+        .post("/webhook/jira")
+        .send(payload);
+
+      expect(res.status).toBe(200);
+      expect(res.body.status).toBe("queued");
+      expect(mockQueue.add).toHaveBeenCalledWith(
+        "process-ticket",
+        expect.objectContaining({
+          triggeredBy: "label-trigger",
         }),
         expect.any(Object)
       );

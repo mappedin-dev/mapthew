@@ -21,5 +21,5 @@ Front end packages should avoid importing from this file. Any code needed by fro
 - `getSessionCount()` counts workspaces that have a matching Claude session directory
 - `validateIssueKey()` guards all workspace operations against path traversal
 - `cleanupWorkspace()` removes both the workspace dir and the Claude session dir
-- `MAX_SESSIONS` is a soft cap; the worker evicts the oldest session (LRU) when exceeded
+- `maxSessions` (dashboard config, default 20) is a soft cap; the worker evicts the oldest session (LRU) when exceeded
 - `pruneInactiveSessions()` removes sessions older than a configurable threshold

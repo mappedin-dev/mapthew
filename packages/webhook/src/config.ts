@@ -10,7 +10,6 @@ export const JIRA_WEBHOOK_SECRET = process.env.JIRA_WEBHOOK_SECRET;
 export const GITHUB_WEBHOOK_SECRET = process.env.GITHUB_WEBHOOK_SECRET;
 export const GITHUB_TOKEN = process.env.GITHUB_TOKEN || "";
 export const FIGMA_API_KEY = process.env.FIGMA_API_KEY || "";
-export const VERBOSE_LOGS = process.env.VERBOSE_LOGS === "true";
 
 // Auth0 - required
 export const AUTH0_DOMAIN = process.env.AUTH0_DOMAIN;

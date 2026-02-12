@@ -1,7 +1,7 @@
 import path from "path";
 import { fileURLToPath } from "url";
 import express, { type Request, type Response } from "express";
-import { PORT, REDIS_URL, VERBOSE_LOGS } from "./config.js";
+import { PORT, REDIS_URL } from "./config.js";
 import { getBotName } from "@mapthew/shared/utils";
 import { initConfigStore, getConfig } from "@mapthew/shared/config";
 import type { RequestWithRawBody } from "./middleware/index.js";
@@ -21,6 +21,7 @@ initConfigStore(REDIS_URL);
 // Load config from Redis on startup
 getConfig().then((config) => {
   console.log(`  Loaded config: botName=${config.botName}`);
+  if (config.verboseLogs) console.log(`  Verbose logging enabled`);
 });
 
 // Serve dashboard static files
@@ -56,5 +57,4 @@ app.get("/health", (_req, res) => {
 app.listen(PORT, () => {
   console.log(`Webhook server listening on port ${PORT}`);
   console.log(`  Listening as: @${getBotName()}`);
-  if (VERBOSE_LOGS) console.log(`  Verbose logging enabled`);
 });

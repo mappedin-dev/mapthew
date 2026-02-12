@@ -3,16 +3,19 @@ import {
   listSessions,
   getMaxSessions,
   getPruneThresholdDays,
+  getSessionSizes,
   cleanupWorkspace,
   type SessionInfo,
+  type SessionSizeInfo,
 } from "@mapthew/shared/workspace";
 
 const router: Router = Router();
 
 /**
- * GET /api/sessions - List all sessions
+ * GET /api/sessions - List all sessions (fast, no size calculation)
  *
  * Returns session information for monitoring/dashboard integration.
+ * Sizes are omitted for speed — use GET /api/sessions/sizes separately.
  */
 router.get("/", async (_req, res) => {
   try {
@@ -32,13 +35,37 @@ router.get("/", async (_req, res) => {
         createdAt: s.createdAt.toISOString(),
         lastUsed: s.lastUsed.toISOString(),
         hasSession: s.hasSession,
-        sizeBytes: s.sizeBytes,
-        sizeMB: Math.round((s.sizeBytes / 1024 / 1024) * 100) / 100,
       })),
     });
   } catch (error) {
     console.error("Error listing sessions:", error);
     res.status(500).json({ error: "Failed to list sessions" });
+  }
+});
+
+/**
+ * GET /api/sessions/sizes - Get sizes for all sessions (slow, async)
+ *
+ * Calculates directory sizes recursively. Called separately so the
+ * sessions page can render immediately while sizes load in the background.
+ */
+router.get("/sizes", async (_req, res) => {
+  try {
+    const sizes = await getSessionSizes();
+
+    res.json({
+      sizes: sizes.map((s: SessionSizeInfo) => ({
+        issueKey: s.issueKey,
+        sizeBytes: s.sizeBytes,
+        sizeMB: Math.round((s.sizeBytes / 1024 / 1024) * 100) / 100,
+        workspaceSizeBytes: s.workspaceSizeBytes,
+        workspaceSizeMB:
+          Math.round((s.workspaceSizeBytes / 1024 / 1024) * 100) / 100,
+      })),
+    });
+  } catch (error) {
+    console.error("Error getting session sizes:", error);
+    res.status(500).json({ error: "Failed to get session sizes" });
   }
 });
 
@@ -53,7 +80,6 @@ router.get("/stats", async (_req, res) => {
 
     const activeSessions = sessions.filter((s: SessionInfo) => s.hasSession);
     const count = activeSessions.length;
-    const totalSize = activeSessions.reduce((sum: number, s: SessionInfo) => sum + s.sizeBytes, 0);
 
     res.json({
       total: sessions.length,
@@ -62,8 +88,6 @@ router.get("/stats", async (_req, res) => {
       available: Math.max(0, softCap - count),
       pruneThresholdDays,
       utilizationPercent: softCap > 0 ? Math.round((count / softCap) * 100) : 0,
-      totalSizeBytes: totalSize,
-      totalSizeMB: Math.round((totalSize / 1024 / 1024) * 100) / 100,
     });
   } catch (error) {
     console.error("Error getting session stats:", error);

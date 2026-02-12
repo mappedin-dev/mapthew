@@ -52,6 +52,9 @@ export default function Settings() {
   const [botName, setBotName] = useState("");
   const [claudeModel, setClaudeModel] = useState<ClaudeModel | "">(CLAUDE_MODELS[0]);
   const [jiraBaseUrl, setJiraBaseUrl] = useState("");
+  const [verboseLogs, setVerboseLogs] = useState(false);
+  const [jiraLabelTrigger, setJiraLabelTrigger] = useState("");
+  const [jiraLabelAdd, setJiraLabelAdd] = useState("");
   const [maxSessions, setMaxSessions] = useState(5);
   const [pruneThresholdDays, setPruneThresholdDays] = useState(7);
   const [pruneIntervalDays, setPruneIntervalDays] = useState(7);
@@ -73,6 +76,9 @@ export default function Settings() {
       setBotName(config.botName);
       setClaudeModel(config.claudeModel);
       setJiraBaseUrl(config.jiraBaseUrl);
+      setVerboseLogs(config.verboseLogs);
+      setJiraLabelTrigger(config.jiraLabelTrigger);
+      setJiraLabelAdd(config.jiraLabelAdd);
       setMaxSessions(config.maxSessions);
       setPruneThresholdDays(config.pruneThresholdDays);
       setPruneIntervalDays(config.pruneIntervalDays);
@@ -80,7 +86,7 @@ export default function Settings() {
   }, [config]);
 
   const mutation = useMutation({
-    mutationFn: (updates: Partial<{ botName: string; claudeModel: ClaudeModel; jiraBaseUrl: string; maxSessions: number; pruneThresholdDays: number; pruneIntervalDays: number }>) =>
+    mutationFn: (updates: Partial<{ botName: string; claudeModel: ClaudeModel; jiraBaseUrl: string; jiraLabelTrigger: string; jiraLabelAdd: string; verboseLogs: boolean; maxSessions: number; pruneThresholdDays: number; pruneIntervalDays: number }>) =>
       api.updateConfig(updates),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["config"] });
@@ -103,7 +109,7 @@ export default function Settings() {
     e.preventDefault();
     setTouched(true);
     if (!validationError && !jiraBaseUrlError && claudeModel) {
-      mutation.mutate({ botName, claudeModel, jiraBaseUrl, maxSessions, pruneThresholdDays, pruneIntervalDays });
+      mutation.mutate({ botName, claudeModel, jiraBaseUrl, jiraLabelTrigger, jiraLabelAdd, verboseLogs, maxSessions, pruneThresholdDays, pruneIntervalDays });
     }
   };
 
@@ -119,6 +125,9 @@ export default function Settings() {
     botName !== config?.botName ||
     claudeModel !== config?.claudeModel ||
     jiraBaseUrl !== config?.jiraBaseUrl ||
+    jiraLabelTrigger !== config?.jiraLabelTrigger ||
+    jiraLabelAdd !== config?.jiraLabelAdd ||
+    verboseLogs !== config?.verboseLogs ||
     maxSessions !== config?.maxSessions ||
     pruneThresholdDays !== config?.pruneThresholdDays ||
     pruneIntervalDays !== config?.pruneIntervalDays;
@@ -189,6 +198,77 @@ export default function Settings() {
               options={CLAUDE_MODELS.map((model) => ({ value: model, label: model }))}
               onChange={(value) => setClaudeModel(value as ClaudeModel)}
             />
+          </div>
+
+          <hr className="border-dark-700" />
+
+          <label htmlFor="verboseLogs" className="flex items-center justify-between cursor-pointer">
+            <div>
+              <p className="text-sm font-medium text-dark-200">
+                {t("settings.verboseLogs.label")}
+              </p>
+              <p className="text-sm text-dark-500 mt-1">
+                {t("settings.verboseLogs.description")}
+              </p>
+            </div>
+            <div className="relative ml-4 shrink-0">
+              <input
+                type="checkbox"
+                id="verboseLogs"
+                checked={verboseLogs}
+                onChange={(e) => setVerboseLogs(e.target.checked)}
+                className="sr-only peer"
+              />
+              <div className="w-11 h-6 bg-dark-700 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-accent rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-dark-400 after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-accent peer-checked:after:bg-white" />
+            </div>
+          </label>
+        </div>
+
+        <div className="glass-card p-6 space-y-6">
+          <h2 className="text-lg font-semibold text-white">{t("settings.jiraLabels.title")}</h2>
+
+          <div>
+            <label htmlFor="jiraLabelTrigger" className="block text-sm font-medium text-dark-200">
+              {t("settings.jiraLabels.trigger.label")}
+            </label>
+            <p className="text-sm text-dark-500 mt-1 mb-3">
+              {t("settings.jiraLabels.trigger.description")}
+            </p>
+            <input
+              type="text"
+              id="jiraLabelTrigger"
+              value={jiraLabelTrigger}
+              onChange={(e) => setJiraLabelTrigger(e.target.value)}
+              autoComplete="off"
+              className="w-full px-4 py-3 bg-dark-950/50 border border-dark-700 rounded-lg text-white placeholder-dark-500 focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent"
+              placeholder={t("settings.jiraLabels.trigger.placeholder")}
+            />
+            <p className="text-sm text-dark-600 mt-3 italic">
+              {t("settings.jiraLabels.trigger.hint")}
+            </p>
+          </div>
+
+          <hr className="border-dark-700" />
+
+          <div>
+            <label htmlFor="jiraLabelAdd" className="block text-sm font-medium text-dark-200">
+              {t("settings.jiraLabels.add.label")}
+            </label>
+            <p className="text-sm text-dark-500 mt-1 mb-3">
+              {t("settings.jiraLabels.add.description")}
+            </p>
+            <input
+              type="text"
+              id="jiraLabelAdd"
+              value={jiraLabelAdd}
+              onChange={(e) => setJiraLabelAdd(e.target.value)}
+              autoComplete="off"
+              className="w-full px-4 py-3 bg-dark-950/50 border border-dark-700 rounded-lg text-white placeholder-dark-500 focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent"
+              placeholder={t("settings.jiraLabels.add.placeholder")}
+            />
+            <p className="text-sm text-dark-600 mt-3 italic">
+              {t("settings.jiraLabels.add.hint")}
+            </p>
           </div>
         </div>
 

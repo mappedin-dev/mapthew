@@ -13,7 +13,7 @@ BullMQ worker that spawns Claude Code CLI to process jobs.
 - Workspaces are **not** cleaned up after job completion — they persist for session reuse
 - On follow-up jobs, the worker uses `--continue` to resume the previous Claude conversation
 - Inactive sessions are pruned periodically via `setInterval` (configurable threshold and interval)
-- At soft cap (`MAX_SESSIONS`), the oldest session is evicted (LRU) to make room for new ones
+- At soft cap (`maxSessions`, configured via dashboard), the oldest session is evicted (LRU) to make room for new ones
 
 ## Gotchas
 

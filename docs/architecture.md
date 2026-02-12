@@ -4,9 +4,10 @@
 
 ### Workflow
 
-Mapthew can be triggered from three entry points:
+Mapthew can be triggered from four entry points:
 
-- **JIRA**: Comment `@mapthew` on a ticket to create a new PR
+- **JIRA Comment**: Comment `@mapthew` on a ticket to create a new PR
+- **JIRA Label**: Add a configured trigger label to a ticket to automatically create a new PR
 - **GitHub**: Comment `@mapthew` on an existing PR to request updates
 - **Admin Dashboard**: Create a job manually with custom instructions
 
@@ -14,6 +15,7 @@ Mapthew can be triggered from three entry points:
 flowchart TD
     subgraph JIRA["☁️ JIRA Cloud"]
         A[👤 Developer comments<br/><code>@mapthew implement auth</code>]
+        L[👤 Developer adds trigger label<br/>to a ticket]
     end
 
     subgraph GitHub["☁️ GitHub"]
@@ -33,7 +35,8 @@ flowchart TD
         K[Figma API]
     end
 
-    A -->|/webhook/jira| B
+    A -->|/webhook/jira<br/>comment_created| B
+    L -->|/webhook/jira<br/>issue_updated| B
     G -->|/webhook/github| B
     ADMIN -->|POST /api/queue/jobs| B
     B -->|queue.add| C
@@ -160,6 +163,32 @@ sequenceDiagram
     Note over W: Workspace persisted for<br/>session reuse on follow-ups
 ```
 
+### JIRA Label-Triggered Job (New PR)
+
+```mermaid
+sequenceDiagram
+    participant JIRA as JIRA Cloud
+    participant WH as Webhook Server
+    participant BullMQ as BullMQ
+    participant W as Worker
+    participant Claude as Claude Code CLI
+
+    JIRA->>WH: Webhook: jira:issue_updated (label added)
+    Note over WH: Checks changelog for<br/>trigger label addition
+    WH->>BullMQ: queue.add(job)
+    WH-->>JIRA: 200 OK {status: "queued"}
+
+    BullMQ->>W: Job {issueKey, source: "jira", triggeredBy: "label-trigger"}
+    Note over BullMQ: Auto-retries on failure
+
+    W->>Claude: Execute with JIRA prompt
+    Note over Claude: Same flow as comment-triggered job
+    Claude-->>W: Done
+    Note over W: Workspace persisted
+```
+
+The label trigger reuses the same JIRA job flow as comment-triggered jobs. The webhook handler detects label additions by comparing `fromString` and `toString` in the JIRA changelog. The trigger and completion labels are configurable via the admin dashboard.
+
 ### GitHub-Triggered Job (Update PR)
 
 ```mermaid
@@ -272,9 +301,9 @@ flowchart TD
 
 - **Workspace**: A directory at `WORKSPACES_DIR/{issueKey}` used as the working directory for Claude CLI. Persists across jobs.
 - **Claude session**: Claude CLI stores conversation history in `~/.claude/projects/{encoded-path}`. The `--continue` flag resumes the most recent conversation.
-- **Session counting**: Only workspaces with a matching Claude session directory count toward `MAX_SESSIONS`.
-- **Periodic pruning**: A background `setInterval` in the worker removes sessions inactive longer than `PRUNE_THRESHOLD_DAYS`. Runs every `PRUNE_INTERVAL_DAYS`.
-- **Soft cap (LRU eviction)**: When creating a new workspace and the session count >= `MAX_SESSIONS`, the oldest session is evicted to make room.
+- **Session counting**: Only workspaces with a matching Claude session directory count toward the soft cap.
+- **Periodic pruning**: A background `setInterval` in the worker removes sessions inactive longer than `pruneThresholdDays`. Runs every `pruneIntervalDays`.
+- **Soft cap (LRU eviction)**: When creating a new workspace and the session count >= `maxSessions` (configured via dashboard, default 20), the oldest session is evicted to make room.
 - **Manual cleanup**: Sessions can be deleted via the dashboard API (`DELETE /api/sessions/:issueKey`), which calls `cleanupWorkspace()` directly.
 
 ### Environment Variables
@@ -282,9 +311,8 @@ flowchart TD
 | Variable                   | Purpose                                         | Default                        |
 | -------------------------- | ----------------------------------------------- | ------------------------------ |
 | `WORKSPACES_DIR`           | Root directory for workspaces                   | `/tmp/{botName}-workspaces`    |
-| `MAX_SESSIONS`             | Soft cap — oldest session evicted when exceeded  | `5`                            |
-| `PRUNE_THRESHOLD_DAYS`     | Sessions inactive longer than this are pruned    | `7`                            |
-| `PRUNE_INTERVAL_DAYS`      | How often the pruning job runs                   | `7` (weekly)                   |
+
+Session settings (`maxSessions`, `pruneThresholdDays`, `pruneIntervalDays`) are configured via the dashboard Settings page.
 
 ### Docker Volumes
 

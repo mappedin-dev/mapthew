@@ -129,10 +129,19 @@ export const api = {
         createdAt: string;
         lastUsed: string;
         hasSession: boolean;
-        sizeBytes: number;
-        sizeMB: number;
       }>;
     }>("/sessions"),
+
+  getSessionSizes: () =>
+    fetchJSON<{
+      sizes: Array<{
+        issueKey: string;
+        sizeBytes: number;
+        sizeMB: number;
+        workspaceSizeBytes: number;
+        workspaceSizeMB: number;
+      }>;
+    }>("/sessions/sizes"),
 
   deleteSession: (issueKey: string) =>
     fetchJSON<{ success: boolean; message: string }>(

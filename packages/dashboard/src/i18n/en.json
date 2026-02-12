@@ -94,6 +94,25 @@
       "label": "Model",
       "description": "The model used when processing tasks"
     },
+    "verboseLogs": {
+      "label": "Verbose Logging",
+      "description": "Log details for ignored webhook events (useful for debugging)"
+    },
+    "jiraLabels": {
+      "title": "JIRA Labels",
+      "trigger": {
+        "label": "Trigger Label",
+        "description": "When this label is added to a JIRA issue, a job is automatically created",
+        "placeholder": "e.g. claude-ready",
+        "hint": "Leave empty to disable label-triggered jobs"
+      },
+      "add": {
+        "label": "Completion Label",
+        "description": "This label is added to the JIRA issue after the job finishes",
+        "placeholder": "e.g. claude-processed",
+        "hint": "Leave empty to skip adding a label after processing"
+      }
+    },
     "sessions": {
       "title": "Sessions",
       "maxSessions": {
@@ -143,13 +162,16 @@
       "active": "Active",
       "available": "Available",
       "pruneThreshold": "Prune After",
+      "totalSessionSize": "Session Size",
+      "totalWorkspaceSize": "Workspace Size",
       "totalSize": "Total Size"
     },
     "table": {
       "issueKey": "Issue Key",
       "lastUsed": "Last Used",
       "created": "Created",
-      "size": "Size",
+      "sessionSize": "Session Size",
+      "workspaceSize": "Workspace Size",
       "actions": "Actions"
     },
     "deleteConfirm": "Delete session for {{issueKey}}?",

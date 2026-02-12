@@ -9,6 +9,7 @@ import {
   cleanupWorkspace,
   getSessionCount,
   listSessions,
+  getSessionSizes,
   getOldestSession,
   evictOldestSession,
   pruneInactiveSessions,
@@ -22,14 +23,12 @@ import {
 let testWorkspacesDir: string;
 let testHomeDir: string;
 let originalWorkspacesDir: string | undefined;
-let originalMaxSessions: string | undefined;
 let originalHome: string | undefined;
 
 describe("workspace", () => {
   beforeEach(async () => {
     // Save original env values
     originalWorkspacesDir = process.env.WORKSPACES_DIR;
-    originalMaxSessions = process.env.MAX_SESSIONS;
     originalHome = process.env.HOME;
 
     // Create unique test directories
@@ -43,7 +42,6 @@ describe("workspace", () => {
 
     // Set environment variables directly
     process.env.WORKSPACES_DIR = testWorkspacesDir;
-    process.env.MAX_SESSIONS = "3";
     process.env.HOME = testHomeDir;
 
     // Reset cached workspaces dir so it picks up the new env var
@@ -65,11 +63,6 @@ describe("workspace", () => {
     } else {
       delete process.env.WORKSPACES_DIR;
     }
-    if (originalMaxSessions !== undefined) {
-      process.env.MAX_SESSIONS = originalMaxSessions;
-    } else {
-      delete process.env.MAX_SESSIONS;
-    }
     if (originalHome !== undefined) {
       process.env.HOME = originalHome;
     } else {
@@ -87,8 +80,8 @@ describe("workspace", () => {
   });
 
   describe("getMaxSessions", () => {
-    it("returns the configured max sessions", async () => {
-      expect(await getMaxSessions()).toBe(3);
+    it("returns the default max sessions", async () => {
+      expect(await getMaxSessions()).toBe(20);
     });
   });
 
@@ -377,17 +370,53 @@ describe("workspace", () => {
       expect(sessions[1].hasSession).toBe(true);
     });
 
-    it("includes size information for sessions", async () => {
+    it("does not include size fields (sizes loaded separately via getSessionSizes)", async () => {
       const ws = path.join(testWorkspacesDir, "DXTR-SIZE");
+      await fs.mkdir(ws, { recursive: true });
+
+      const sessionDir = await createClaudeSession(ws);
+      await fs.writeFile(path.join(sessionDir, "session.jsonl"), "x".repeat(1000));
+
+      const sessions = await listSessions();
+
+      expect(sessions[0]).not.toHaveProperty("sizeBytes");
+      expect(sessions[0]).not.toHaveProperty("workspaceSizeBytes");
+    });
+  });
+
+  describe("getSessionSizes", () => {
+    it("returns empty array when no workspaces exist", async () => {
+      const sizes = await getSessionSizes();
+      expect(sizes).toEqual([]);
+    });
+
+    it("includes session size information", async () => {
+      const ws = path.join(testWorkspacesDir, "DXTR-SIZE2");
       await fs.mkdir(ws, { recursive: true });
 
       // Create Claude session and add a file to it
       const sessionDir = await createClaudeSession(ws);
       await fs.writeFile(path.join(sessionDir, "session.jsonl"), "x".repeat(1000));
 
-      const sessions = await listSessions();
+      const sizes = await getSessionSizes();
+      const entry = sizes.find((s) => s.issueKey === "DXTR-SIZE2");
 
-      expect(sessions[0].sizeBytes).toBeGreaterThanOrEqual(1000);
+      expect(entry).toBeDefined();
+      expect(entry!.sizeBytes).toBeGreaterThanOrEqual(1000);
+    });
+
+    it("includes workspace size information", async () => {
+      const ws = path.join(testWorkspacesDir, "DXTR-WSSIZE2");
+      await fs.mkdir(ws, { recursive: true });
+
+      // Add files to the workspace directory
+      await fs.writeFile(path.join(ws, "code.ts"), "y".repeat(2000));
+
+      const sizes = await getSessionSizes();
+      const entry = sizes.find((s) => s.issueKey === "DXTR-WSSIZE2");
+
+      expect(entry).toBeDefined();
+      expect(entry!.workspaceSizeBytes).toBeGreaterThanOrEqual(2000);
     });
   });
 

@@ -22,6 +22,7 @@ router.put("/", async (req, res) => {
   try {
     const {
       botName, claudeModel, jiraBaseUrl,
+      jiraLabelTrigger, jiraLabelAdd, verboseLogs,
       maxSessions, pruneThresholdDays, pruneIntervalDays,
     } = req.body as Partial<AppConfig>;
     const config = await getConfig();
@@ -52,6 +53,26 @@ router.put("/", async (req, res) => {
         return;
       }
       config.jiraBaseUrl = jiraBaseUrl;
+    }
+
+    if (jiraLabelTrigger !== undefined) {
+      if (jiraLabelTrigger.length > 255) {
+        res.status(400).json({ error: "Label trigger must be 255 characters or less." });
+        return;
+      }
+      config.jiraLabelTrigger = jiraLabelTrigger.trim();
+    }
+
+    if (jiraLabelAdd !== undefined) {
+      if (jiraLabelAdd.length > 255) {
+        res.status(400).json({ error: "Label add must be 255 characters or less." });
+        return;
+      }
+      config.jiraLabelAdd = jiraLabelAdd.trim();
+    }
+
+    if (verboseLogs !== undefined) {
+      config.verboseLogs = verboseLogs;
     }
 
     if (maxSessions !== undefined) {
