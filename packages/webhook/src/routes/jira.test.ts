@@ -7,16 +7,27 @@ const mockQueue = vi.hoisted(() => ({
   add: vi.fn().mockResolvedValue({ id: "job-123" }),
 }));
 
+const mockSecrets: Record<string, string> = {
+  jiraBaseUrl: "https://test.atlassian.net",
+  jiraEmail: "test@example.com",
+  jiraApiToken: "mock-token",
+};
+
+const mockSecretsManager = vi.hoisted(() => ({
+  get: vi.fn().mockImplementation(async (key: string) => mockSecrets[key]),
+  getMany: vi.fn().mockImplementation(async (keys: string[]) => {
+    const result: Record<string, string | undefined> = {};
+    for (const key of keys) result[key] = mockSecrets[key];
+    return result;
+  }),
+}));
+
 const mockGetConfig = vi.hoisted(() => vi.fn());
 
 // Mock config module
 vi.mock("../config.js", () => ({
   queue: mockQueue,
-  jiraCredentials: {
-    baseUrl: "https://test.atlassian.net",
-    email: "test@example.com",
-    apiToken: "mock-token",
-  },
+  secretsManager: mockSecretsManager,
 }));
 
 // Mock middleware to skip signature verification in tests
@@ -61,7 +72,6 @@ describe("JIRA webhook routes", () => {
     mockGetConfig.mockResolvedValue({
       jiraLabelTrigger: "claude-ready",
       jiraLabelAdd: "claude-processed",
-      verboseLogs: false,
     });
   });
 
@@ -244,7 +254,6 @@ describe("JIRA webhook routes", () => {
       mockGetConfig.mockResolvedValue({
         jiraLabelTrigger: "",
         jiraLabelAdd: "",
-        verboseLogs: false,
       });
 
       const payload = {
@@ -277,7 +286,6 @@ describe("JIRA webhook routes", () => {
       mockGetConfig.mockResolvedValue({
         jiraLabelTrigger: "auto-implement",
         jiraLabelAdd: "claude-processed",
-        verboseLogs: false,
       });
 
       const payload = {

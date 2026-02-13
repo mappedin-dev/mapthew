@@ -5,7 +5,12 @@ import type { RequestWithRawBody } from "./index.js";
 
 // Mock the config module before importing the middleware
 vi.mock("../config.js", () => ({
-  GITHUB_WEBHOOK_SECRET: "test-github-secret",
+  secretsManager: {
+    get: vi.fn().mockImplementation(async (key: string) => {
+      if (key === "githubWebhookSecret") return "test-github-secret";
+      return undefined;
+    }),
+  },
 }));
 
 import { githubWebhookAuth } from "./github.js";
@@ -38,7 +43,7 @@ describe("githubWebhookAuth middleware", () => {
     mockNext = vi.fn();
   });
 
-  it("calls next() for valid signature", () => {
+  it("calls next() for valid signature", async () => {
     const payload = '{"action":"opened"}';
     const signature = generateSignature("test-github-secret", payload);
 
@@ -48,34 +53,34 @@ describe("githubWebhookAuth middleware", () => {
     });
     const res = createMockResponse();
 
-    githubWebhookAuth(req, res, mockNext);
+    await githubWebhookAuth(req, res, mockNext);
 
     expect(mockNext).toHaveBeenCalled();
     expect(res.status).not.toHaveBeenCalled();
   });
 
-  it("returns 401 when signature header is missing", () => {
+  it("returns 401 when signature header is missing", async () => {
     const req = createMockRequest({
       headers: {},
       rawBody: '{"action":"opened"}',
     });
     const res = createMockResponse();
 
-    githubWebhookAuth(req, res, mockNext);
+    await githubWebhookAuth(req, res, mockNext);
 
     expect(res.status).toHaveBeenCalledWith(401);
     expect(res.json).toHaveBeenCalledWith({ error: "Missing webhook signature" });
     expect(mockNext).not.toHaveBeenCalled();
   });
 
-  it("returns 500 when raw body is not available", () => {
+  it("returns 500 when raw body is not available", async () => {
     const req = createMockRequest({
       headers: { "x-hub-signature-256": "sha256=somesignature" },
       rawBody: undefined,
     });
     const res = createMockResponse();
 
-    githubWebhookAuth(req, res, mockNext);
+    await githubWebhookAuth(req, res, mockNext);
 
     expect(res.status).toHaveBeenCalledWith(500);
     expect(res.json).toHaveBeenCalledWith({
@@ -84,7 +89,7 @@ describe("githubWebhookAuth middleware", () => {
     expect(mockNext).not.toHaveBeenCalled();
   });
 
-  it("returns 401 for invalid signature", () => {
+  it("returns 401 for invalid signature", async () => {
     const payload = '{"action":"opened"}';
     const wrongSignature = generateSignature("wrong-secret", payload);
 
@@ -94,14 +99,14 @@ describe("githubWebhookAuth middleware", () => {
     });
     const res = createMockResponse();
 
-    githubWebhookAuth(req, res, mockNext);
+    await githubWebhookAuth(req, res, mockNext);
 
     expect(res.status).toHaveBeenCalledWith(401);
     expect(res.json).toHaveBeenCalledWith({ error: "Invalid webhook signature" });
     expect(mockNext).not.toHaveBeenCalled();
   });
 
-  it("returns 401 for tampered payload", () => {
+  it("returns 401 for tampered payload", async () => {
     const originalPayload = '{"action":"opened"}';
     const signature = generateSignature("test-github-secret", originalPayload);
     const tamperedPayload = '{"action":"closed"}';
@@ -112,7 +117,7 @@ describe("githubWebhookAuth middleware", () => {
     });
     const res = createMockResponse();
 
-    githubWebhookAuth(req, res, mockNext);
+    await githubWebhookAuth(req, res, mockNext);
 
     expect(res.status).toHaveBeenCalledWith(401);
     expect(res.json).toHaveBeenCalledWith({ error: "Invalid webhook signature" });

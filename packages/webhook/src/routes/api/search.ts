@@ -1,16 +1,14 @@
 import { Router } from "express";
-import {
-  JIRA_BASE_URL,
-  JIRA_EMAIL,
-  JIRA_API_TOKEN,
-  GITHUB_TOKEN,
-} from "../../config.js";
+import { secretsManager } from "../../config.js";
 
 const router: Router = Router();
 
 // Helper to create JIRA auth header
-function getJiraAuth(): string {
-  return Buffer.from(`${JIRA_EMAIL}:${JIRA_API_TOKEN}`).toString("base64");
+async function getJiraAuth(): Promise<string> {
+  const { jiraEmail, jiraApiToken } = await secretsManager.getMany([
+    "jiraEmail", "jiraApiToken",
+  ]);
+  return Buffer.from(`${jiraEmail || ""}:${jiraApiToken || ""}`).toString("base64");
 }
 
 // ============================================
@@ -22,13 +20,19 @@ router.get("/jira/boards", async (req, res) => {
   try {
     const query = (req.query.q as string) || "";
 
-    if (!JIRA_BASE_URL || !JIRA_EMAIL || !JIRA_API_TOKEN) {
+    const { jiraBaseUrl, jiraEmail, jiraApiToken } = await secretsManager.getMany([
+      "jiraBaseUrl", "jiraEmail", "jiraApiToken",
+    ]);
+
+    if (!jiraBaseUrl || !jiraEmail || !jiraApiToken) {
       res.status(503).json({ error: "JIRA credentials not configured" });
       return;
     }
 
+    const jiraAuth = await getJiraAuth();
+
     // Fetch both boards and spaces in parallel
-    const boardsUrl = new URL(`${JIRA_BASE_URL}/rest/agile/1.0/board`);
+    const boardsUrl = new URL(`${jiraBaseUrl}/rest/agile/1.0/board`);
     if (query) {
       boardsUrl.searchParams.set("name", query);
     }
@@ -37,13 +41,13 @@ router.get("/jira/boards", async (req, res) => {
     // Fetch boards
     const boardsPromise = fetch(boardsUrl.toString(), {
       headers: {
-        Authorization: `Basic ${getJiraAuth()}`,
+        Authorization: `Basic ${jiraAuth}`,
         Accept: "application/json",
       },
     });
 
     // Fetch projects (spaces) - projects are the closest equivalent to "spaces" in JIRA
-    const projectsUrl = new URL(`${JIRA_BASE_URL}/rest/api/3/project/search`);
+    const projectsUrl = new URL(`${jiraBaseUrl}/rest/api/3/project/search`);
     if (query) {
       projectsUrl.searchParams.set("query", query);
     }
@@ -51,7 +55,7 @@ router.get("/jira/boards", async (req, res) => {
 
     const projectsPromise = fetch(projectsUrl.toString(), {
       headers: {
-        Authorization: `Basic ${getJiraAuth()}`,
+        Authorization: `Basic ${jiraAuth}`,
         Accept: "application/json",
       },
     });
@@ -112,7 +116,11 @@ router.get("/jira/issues", async (req, res) => {
     const query = (req.query.q as string) || "";
     const boardId = req.query.board as string | undefined;
 
-    if (!JIRA_BASE_URL || !JIRA_EMAIL || !JIRA_API_TOKEN) {
+    const { jiraBaseUrl, jiraEmail, jiraApiToken } = await secretsManager.getMany([
+      "jiraBaseUrl", "jiraEmail", "jiraApiToken",
+    ]);
+
+    if (!jiraBaseUrl || !jiraEmail || !jiraApiToken) {
       res.status(503).json({ error: "JIRA credentials not configured" });
       return;
     }
@@ -121,6 +129,8 @@ router.get("/jira/issues", async (req, res) => {
       res.status(400).json({ error: "board parameter is required" });
       return;
     }
+
+    const jiraAuth = await getJiraAuth();
 
     // Parse the board ID to determine type (board:123 or project:KEY)
     const [type, id] = boardId.split(":");
@@ -132,10 +142,10 @@ router.get("/jira/issues", async (req, res) => {
     } else if (type === "board") {
       // Need to fetch the board to get its project
       const boardResponse = await fetch(
-        `${JIRA_BASE_URL}/rest/agile/1.0/board/${id}`,
+        `${jiraBaseUrl}/rest/agile/1.0/board/${id}`,
         {
           headers: {
-            Authorization: `Basic ${getJiraAuth()}`,
+            Authorization: `Basic ${jiraAuth}`,
             Accept: "application/json",
           },
         }
@@ -167,14 +177,14 @@ router.get("/jira/issues", async (req, res) => {
     // Add ordering to JQL query
     jql = `${jql} ORDER BY updated DESC`;
 
-    const url = new URL(`${JIRA_BASE_URL}/rest/api/3/search/jql`);
+    const url = new URL(`${jiraBaseUrl}/rest/api/3/search/jql`);
     url.searchParams.set("jql", jql);
     url.searchParams.set("maxResults", "20");
     url.searchParams.set("fields", "key,summary");
 
     const response = await fetch(url.toString(), {
       headers: {
-        Authorization: `Basic ${getJiraAuth()}`,
+        Authorization: `Basic ${jiraAuth}`,
         Accept: "application/json",
       },
     });
@@ -213,7 +223,8 @@ router.get("/github/repos", async (req, res) => {
   try {
     const query = (req.query.q as string)?.toLowerCase() || "";
 
-    if (!GITHUB_TOKEN) {
+    const githubToken = await secretsManager.get("githubToken");
+    if (!githubToken) {
       res.status(503).json({ error: "GitHub token not configured" });
       return;
     }
@@ -226,7 +237,7 @@ router.get("/github/repos", async (req, res) => {
 
     const response = await fetch(url.toString(), {
       headers: {
-        Authorization: `Bearer ${GITHUB_TOKEN}`,
+        Authorization: `Bearer ${githubToken}`,
         Accept: "application/vnd.github+json",
         "X-GitHub-Api-Version": "2022-11-28",
       },
@@ -280,7 +291,8 @@ router.get("/github/branches", async (req, res) => {
       return;
     }
 
-    if (!GITHUB_TOKEN) {
+    const githubToken = await secretsManager.get("githubToken");
+    if (!githubToken) {
       res.status(503).json({ error: "GitHub token not configured" });
       return;
     }
@@ -292,7 +304,7 @@ router.get("/github/branches", async (req, res) => {
 
     const response = await fetch(url.toString(), {
       headers: {
-        Authorization: `Bearer ${GITHUB_TOKEN}`,
+        Authorization: `Bearer ${githubToken}`,
         Accept: "application/vnd.github+json",
         "X-GitHub-Api-Version": "2022-11-28",
       },
@@ -342,7 +354,8 @@ router.get("/github/pulls", async (req, res) => {
       return;
     }
 
-    if (!GITHUB_TOKEN) {
+    const githubToken = await secretsManager.get("githubToken");
+    if (!githubToken) {
       res.status(503).json({ error: "GitHub token not configured" });
       return;
     }
@@ -355,7 +368,7 @@ router.get("/github/pulls", async (req, res) => {
 
     const response = await fetch(url.toString(), {
       headers: {
-        Authorization: `Bearer ${GITHUB_TOKEN}`,
+        Authorization: `Bearer ${githubToken}`,
         Accept: "application/vnd.github+json",
         "X-GitHub-Api-Version": "2022-11-28",
       },
@@ -410,7 +423,8 @@ router.get("/github/issues", async (req, res) => {
       return;
     }
 
-    if (!GITHUB_TOKEN) {
+    const githubToken = await secretsManager.get("githubToken");
+    if (!githubToken) {
       res.status(503).json({ error: "GitHub token not configured" });
       return;
     }
@@ -423,7 +437,7 @@ router.get("/github/issues", async (req, res) => {
 
     const response = await fetch(url.toString(), {
       headers: {
-        Authorization: `Bearer ${GITHUB_TOKEN}`,
+        Authorization: `Bearer ${githubToken}`,
         Accept: "application/vnd.github+json",
         "X-GitHub-Api-Version": "2022-11-28",
       },

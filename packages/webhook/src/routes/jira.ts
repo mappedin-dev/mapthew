@@ -10,10 +10,23 @@ import {
 } from "@mapthew/shared/utils";
 import { postJiraComment } from "@mapthew/shared/api";
 import { getConfig } from "@mapthew/shared/config";
-import { queue, jiraCredentials } from "../config.js";
+import type { JiraCredentials } from "@mapthew/shared/types";
+import { queue, secretsManager } from "../config.js";
 import { jiraWebhookAuth } from "../middleware/index.js";
 
 const router: Router = Router();
+
+/**
+ * Build JIRA credentials from vault secrets + config
+ */
+async function getJiraCredentials(): Promise<JiraCredentials> {
+  const secrets = await secretsManager.getMany(["jiraBaseUrl", "jiraEmail", "jiraApiToken"]);
+  return {
+    baseUrl: secrets.jiraBaseUrl || "",
+    email: secrets.jiraEmail || "",
+    apiToken: secrets.jiraApiToken || "",
+  };
+}
 
 /**
  * Extract project key from issue key (e.g., "DXTR-123" -> "DXTR")
@@ -40,10 +53,6 @@ router.post("/", jiraWebhookAuth, async (req, res) => {
       const commentPayload = payload as WebhookPayload;
       const instruction = extractBotInstruction(commentPayload.comment.body);
       if (!instruction) {
-        if (config.verboseLogs)
-          console.log(
-            `Jira webhook ignored: no @${getBotName()} trigger in ${commentPayload.issue.key} comment by ${commentPayload.comment.author.displayName}`,
-          );
         return res.status(200).json({
           status: "ignored",
           reason: `no @${getBotName()} trigger found`,
@@ -65,6 +74,7 @@ router.post("/", jiraWebhookAuth, async (req, res) => {
 
       console.log(`Job queued for ${job.issueKey}: ${job.instruction}`);
 
+      const jiraCredentials = await getJiraCredentials();
       await postJiraComment(jiraCredentials, job.issueKey, "🤓 Okie dokie!");
 
       return res.status(200).json({ status: "queued", issueKey: job.issueKey });
@@ -76,8 +86,6 @@ router.post("/", jiraWebhookAuth, async (req, res) => {
       const updatedPayload = payload as JiraIssueUpdatedPayload;
 
       if (!labelTrigger) {
-        if (config.verboseLogs)
-          console.log(`Jira webhook ignored: label trigger not configured`);
         return res.status(200).json({
           status: "ignored",
           reason: "label trigger not configured",
@@ -85,10 +93,6 @@ router.post("/", jiraWebhookAuth, async (req, res) => {
       }
 
       if (!wasLabelAdded(updatedPayload, labelTrigger)) {
-        if (config.verboseLogs)
-          console.log(
-            `Jira webhook ignored: trigger label "${labelTrigger}" was not added to ${updatedPayload.issue.key}`,
-          );
         return res.status(200).json({
           status: "ignored",
           reason: `trigger label "${labelTrigger}" was not added`,
@@ -112,16 +116,13 @@ router.post("/", jiraWebhookAuth, async (req, res) => {
         `Job queued for ${job.issueKey} via label trigger "${labelTrigger}"`,
       );
 
+      const jiraCredentials = await getJiraCredentials();
       await postJiraComment(jiraCredentials, job.issueKey, "🤓 Okie dokie!");
 
       return res.status(200).json({ status: "queued", issueKey: job.issueKey });
     }
 
     // --- Unhandled event ---
-    if (config.verboseLogs)
-      console.log(
-        `Jira webhook ignored: unhandled event (webhookEvent: ${payload.webhookEvent ?? "unknown"})`,
-      );
     return res
       .status(200)
       .json({ status: "ignored", reason: "unhandled event" });

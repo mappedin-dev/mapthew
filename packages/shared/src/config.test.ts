@@ -19,11 +19,9 @@ function buildConfig(overrides: Record<string, unknown> = {}) {
   return {
     botName: "mapthew",
     claudeModel: "claude-sonnet-4-5" as const,
-    jiraBaseUrl: "",
     jiraLabelTrigger: "claude-ready",
     jiraLabelAdd: "claude-processed",
-    verboseLogs: false,
-    maxSessions: 5,
+    maxSessions: 20,
     pruneThresholdDays: 7,
     pruneIntervalDays: 7,
     maxOutputBufferBytes: 10 * 1024 * 1024,
@@ -42,7 +40,6 @@ describe("config persistence with Redis", () => {
     await saveConfig(
       buildConfig({
         botName: "persistbot",
-        jiraBaseUrl: "https://test.atlassian.net",
         maxSessions: 10,
         pruneThresholdDays: 14,
         pruneIntervalDays: 1,
@@ -52,7 +49,6 @@ describe("config persistence with Redis", () => {
     const config = await getConfig();
     expect(config.botName).toBe("persistbot");
     expect(config.claudeModel).toBe("claude-sonnet-4-5");
-    expect(config.jiraBaseUrl).toBe("https://test.atlassian.net");
     expect(config.maxSessions).toBe(10);
     expect(config.pruneThresholdDays).toBe(14);
     expect(config.pruneIntervalDays).toBe(1);
@@ -61,14 +57,6 @@ describe("config persistence with Redis", () => {
   it("throws on invalid bot name during save", async () => {
     await expect(
       saveConfig(buildConfig({ botName: "Invalid-Name" })),
-    ).rejects.toThrow();
-  });
-
-  it("throws on invalid JIRA URL during save", async () => {
-    await expect(
-      saveConfig(
-        buildConfig({ botName: "validbot", jiraBaseUrl: "http://not-https.com" }),
-      ),
     ).rejects.toThrow();
   });
 

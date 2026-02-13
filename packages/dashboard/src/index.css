@@ -85,7 +85,12 @@ body {
     transform: translateX(calc(var(--tab-0-width, 80px) + var(--tab-gap)));
   }
 
-  /* Hide highlight when neither main tab is active (e.g., on Settings page) */
+  .nav-tabs:has(.nav-item[data-index="2"].active) .nav-highlight {
+    width: var(--tab-2-width, 96px);
+    transform: translateX(calc(var(--tab-0-width, 80px) + var(--tab-1-width, 72px) + 2 * var(--tab-gap)));
+  }
+
+  /* Hide highlight when no main tab is active (e.g., on Settings page) */
   .nav-tabs:not(:has(.nav-item.active)) .nav-highlight {
     opacity: 0;
   }

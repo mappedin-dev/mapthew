@@ -1,7 +1,14 @@
 import path from "path";
 import { fileURLToPath } from "url";
 import express, { type Request, type Response } from "express";
-import { PORT, REDIS_URL } from "./config.js";
+import {
+  PORT,
+  REDIS_URL,
+  secretsManager,
+  AZURE_KEYVAULT_URL,
+  AZURE_IDENTITY_ENDPOINT,
+  AZURE_IDENTITY_HEADER,
+} from "./config.js";
 import { getBotName } from "@mapthew/shared/utils";
 import { initConfigStore, getConfig } from "@mapthew/shared/config";
 import type { RequestWithRawBody } from "./middleware/index.js";
@@ -21,7 +28,6 @@ initConfigStore(REDIS_URL);
 // Load config from Redis on startup
 getConfig().then((config) => {
   console.log(`  Loaded config: botName=${config.botName}`);
-  if (config.verboseLogs) console.log(`  Verbose logging enabled`);
 });
 
 // Serve dashboard static files
@@ -53,8 +59,20 @@ app.get("/health", (_req, res) => {
   res.json({ status: "ok" });
 });
 
-// Start server
-app.listen(PORT, () => {
-  console.log(`Webhook server listening on port ${PORT}`);
-  console.log(`  Listening as: @${getBotName()}`);
+// Initialize secrets manager and start server
+(async () => {
+  // Initialize secrets manager (connects to vault, seeds from env, populates cache)
+  await secretsManager.init({
+    vaultUrl: AZURE_KEYVAULT_URL!,
+    identityEndpoint: AZURE_IDENTITY_ENDPOINT!,
+    identityHeader: AZURE_IDENTITY_HEADER!,
+  });
+
+  app.listen(PORT, () => {
+    console.log(`Webhook server listening on port ${PORT}`);
+    console.log(`  Listening as: @${getBotName()}`);
+  });
+})().catch((err) => {
+  console.error("Fatal: failed to start server:", err);
+  process.exit(1);
 });

@@ -15,13 +15,10 @@ export type ClaudeModel = (typeof CLAUDE_MODELS)[number];
 export interface AppConfig {
   botName: string;
   claudeModel: ClaudeModel;
-  jiraBaseUrl: string;
   /** Label that triggers a job when added to a JIRA issue */
   jiraLabelTrigger: string;
   /** Label to add to a JIRA issue after processing completes */
   jiraLabelAdd: string;
-  /** Enable verbose logging for ignored webhook events */
-  verboseLogs: boolean;
   /** Soft cap — oldest session evicted when exceeded */
   maxSessions: number;
   /** Sessions inactive longer than this (days) are pruned */
@@ -234,6 +231,7 @@ export type JobData = Pick<
  */
 export interface SecretsStatus {
   jira: {
+    baseUrl: string;
     email: string;
     tokenMasked: string;
     webhookSecretMasked: string;
@@ -245,6 +243,27 @@ export interface SecretsStatus {
   figma: {
     apiKeyMasked: string;
   };
+}
+
+/**
+ * Valid secret key identifiers for vault storage
+ */
+export type SecretKey =
+  | "jiraBaseUrl"
+  | "jiraEmail"
+  | "jiraApiToken"
+  | "jiraWebhookSecret"
+  | "githubToken"
+  | "githubWebhookSecret"
+  | "figmaApiKey"
+  | "anthropicApiKey";
+
+/**
+ * Payload for updating a single secret
+ */
+export interface SecretUpdate {
+  key: SecretKey;
+  value: string;
 }
 
 /**

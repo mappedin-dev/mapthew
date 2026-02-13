@@ -12,8 +12,7 @@ import {
   getBotName,
 } from "@mapthew/shared/utils";
 import { postGitHubComment, fetchGitHubPRDetails } from "@mapthew/shared/api";
-import { getConfig } from "@mapthew/shared/config";
-import { queue, GITHUB_TOKEN } from "../config.js";
+import { queue, secretsManager } from "../config.js";
 import { githubWebhookAuth } from "../middleware/index.js";
 
 const router: Router = Router();
@@ -38,8 +37,9 @@ async function queueGitHubJob(
   );
 
   try {
+    const githubToken = await secretsManager.get("githubToken") || "";
     await postGitHubComment(
-      GITHUB_TOKEN,
+      githubToken,
       job.owner,
       job.repo,
       commentNumber,
@@ -59,7 +59,6 @@ async function queueGitHubJob(
 router.post("/", githubWebhookAuth, async (req, res) => {
   try {
     const event = req.headers["x-github-event"];
-    const config = await getConfig();
 
     // Handle ping events (sent when webhook is first configured)
     if (event === "ping") {
@@ -71,10 +70,6 @@ router.post("/", githubWebhookAuth, async (req, res) => {
       const payload = req.body as GitHubReviewCommentPayload;
 
       if (payload.action !== "created") {
-        if (config.verboseLogs)
-          console.log(
-            `GitHub webhook ignored: review comment action "${payload.action}"`,
-          );
         return res.status(200).json({
           status: "ignored",
           reason: "review comment not created",
@@ -83,10 +78,6 @@ router.post("/", githubWebhookAuth, async (req, res) => {
 
       const instruction = extractBotInstruction(payload.comment.body);
       if (!instruction) {
-        if (config.verboseLogs)
-          console.log(
-            `GitHub webhook ignored: no @${getBotName()} trigger in review comment by ${payload.comment.user.login}`,
-          );
         return res.status(200).json({
           status: "ignored",
           reason: `no @${getBotName()} trigger found`,
@@ -126,8 +117,6 @@ router.post("/", githubWebhookAuth, async (req, res) => {
 
     // Handle issue_comment events
     if (event !== "issue_comment") {
-      if (config.verboseLogs)
-        console.log(`GitHub webhook ignored: event type "${event}"`);
       return res
         .status(200)
         .json({ status: "ignored", reason: `event type: ${event}` });
@@ -140,10 +129,6 @@ router.post("/", githubWebhookAuth, async (req, res) => {
 
     // Only process new comments on PRs or issues (not edits/deletes)
     if (!isPR && !isIssue) {
-      if (config.verboseLogs)
-        console.log(
-          `GitHub webhook ignored: not a new PR or issue comment (action: ${payload.action})`,
-        );
       return res
         .status(200)
         .json({ status: "ignored", reason: "not a new PR or issue comment" });
@@ -151,13 +136,6 @@ router.post("/", githubWebhookAuth, async (req, res) => {
 
     const instruction = extractBotInstruction(payload.comment.body);
     if (!instruction) {
-      const { login: owner } = payload.repository.owner;
-      const repo = payload.repository.name;
-      const number = payload.issue.number;
-      if (config.verboseLogs)
-        console.log(
-          `GitHub webhook ignored: no @${getBotName()} trigger in ${owner}/${repo}#${number} comment by ${payload.comment.user.login}`,
-        );
       return res.status(200).json({
         status: "ignored",
         reason: `no @${getBotName()} trigger found`,
@@ -171,8 +149,9 @@ router.post("/", githubWebhookAuth, async (req, res) => {
     // Fetch PR details to get the branch name for session linking (only for PRs)
     let branchName: string | undefined;
     if (isPR) {
+      const githubToken = await secretsManager.get("githubToken") || "";
       const prDetails = await fetchGitHubPRDetails(
-        GITHUB_TOKEN,
+        githubToken,
         owner,
         repo,
         number,

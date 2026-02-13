@@ -1,7 +1,6 @@
 import { Router } from "express";
 import { getConfig, saveConfig } from "@mapthew/shared/config";
 import { CLAUDE_MODELS } from "@mapthew/shared/constants";
-import { isValidJiraUrl } from "@mapthew/shared/utils";
 import type { AppConfig } from "@mapthew/shared/types";
 
 const router: Router = Router();
@@ -21,8 +20,8 @@ router.get("/", async (_req, res) => {
 router.put("/", async (req, res) => {
   try {
     const {
-      botName, claudeModel, jiraBaseUrl,
-      jiraLabelTrigger, jiraLabelAdd, verboseLogs,
+      botName, claudeModel,
+      jiraLabelTrigger, jiraLabelAdd,
       maxSessions, pruneThresholdDays, pruneIntervalDays,
       maxOutputBufferBytes,
     } = req.body as Partial<AppConfig>;
@@ -46,16 +45,6 @@ router.put("/", async (req, res) => {
       config.claudeModel = claudeModel;
     }
 
-    if (jiraBaseUrl !== undefined) {
-      if (!isValidJiraUrl(jiraBaseUrl)) {
-        res.status(400).json({
-          error: "Invalid JIRA base URL. Must be a valid HTTPS URL.",
-        });
-        return;
-      }
-      config.jiraBaseUrl = jiraBaseUrl;
-    }
-
     if (jiraLabelTrigger !== undefined) {
       if (jiraLabelTrigger.length > 255) {
         res.status(400).json({ error: "Label trigger must be 255 characters or less." });
@@ -70,10 +59,6 @@ router.put("/", async (req, res) => {
         return;
       }
       config.jiraLabelAdd = jiraLabelAdd.trim();
-    }
-
-    if (verboseLogs !== undefined) {
-      config.verboseLogs = verboseLogs;
     }
 
     if (maxSessions !== undefined) {
@@ -109,7 +94,7 @@ router.put("/", async (req, res) => {
     }
 
     await saveConfig(config);
-    console.log(`Config updated: botName=${config.botName}, claudeModel=${config.claudeModel}, jiraBaseUrl=${config.jiraBaseUrl}`);
+    console.log(`Config updated: botName=${config.botName}, claudeModel=${config.claudeModel}`);
 
     const updatedConfig: AppConfig = await getConfig();
     res.json(updatedConfig);

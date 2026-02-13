@@ -6,6 +6,7 @@ volumes:
   dashboard-dist:
   mapthew-workspaces:  # Named volume for workspace persistence
   claude-sessions:     # Named volume for Claude CLI session persistence
+  vault-import:        # Shared between vault-init and lowkey-vault
 
 services:
   redis:
@@ -15,6 +16,38 @@ services:
       - mapthew
     ports:
       - "${REDIS_PORT:-6379}:6379"
+
+  vault-init:
+    container_name: vault-init
+    image: node:22-alpine
+    volumes:
+      - ./.env.local:/app/.env.local:ro
+      - ./scripts/lowkey-vault-init.mjs:/app/generate.mjs:ro
+      - vault-import:/output
+    environment:
+      VAULT_ENV_FILE: /app/.env.local
+      VAULT_OUTPUT_DIR: /output
+    command: node /app/generate.mjs
+
+  lowkey-vault:
+    container_name: lowkey-vault
+    image: nagyesta/lowkey-vault:7.1.9
+    networks:
+      - mapthew
+    ports:
+      - "8443:8443"
+      - "8080:8080"
+    volumes:
+      - vault-import:/import:ro
+    environment:
+      LOWKEY_ARGS: >
+        --LOWKEY_VAULT_NAMES=-
+        --LOWKEY_IMPORT_LOCATION=/import/vault.json.hbs
+        --LOWKEY_IMPORT_TEMPLATE_HOST=lowkey-vault
+        --LOWKEY_IMPORT_TEMPLATE_PORT=8443
+    depends_on:
+      vault-init:
+        condition: service_completed_successfully
 
   dashboard:
     container_name: dashboard
@@ -48,16 +81,16 @@ services:
       - CLAUDE_CONFIG_DIR=/data/claude-sessions
       - PORT=${WEBHOOK_PORT:-3000}
       - REDIS_URL=redis://redis:6379
-      - JIRA_BASE_URL
-      - JIRA_EMAIL
-      - JIRA_API_TOKEN
-      - JIRA_WEBHOOK_SECRET
-      - GITHUB_WEBHOOK_SECRET
-      - FIGMA_API_KEY
+      # LOCAL DEV ONLY — required for Lowkey Vault self-signed certs. DO NOT use in production.
+      - NODE_TLS_REJECT_UNAUTHORIZED=0
+      - AZURE_KEYVAULT_URL
+      - AZURE_IDENTITY_ENDPOINT
+      - AZURE_IDENTITY_HEADER
     env_file: .env
     depends_on:
       - redis
       - dashboard
+      - lowkey-vault
 
   worker:
     container_name: worker-1
@@ -75,15 +108,12 @@ services:
       - claude-sessions:/home/worker/.claude         # Persist Claude CLI sessions
     environment:
       - REDIS_URL=redis://redis:6379
-      - JIRA_BASE_URL
-      - JIRA_EMAIL
-      - JIRA_API_TOKEN
-      - JIRA_LABEL_ADD
-      - JIRA_LABEL_TRIGGER
-      - GITHUB_TOKEN
-      - FIGMA_API_KEY
-      - ANTHROPIC_API_KEY
-      - CLAUDE_MODEL
+      # LOCAL DEV ONLY — required for Lowkey Vault self-signed certs. DO NOT use in production.
+      - NODE_TLS_REJECT_UNAUTHORIZED=0
+      - AZURE_KEYVAULT_URL
+      - AZURE_IDENTITY_ENDPOINT
+      - AZURE_IDENTITY_HEADER
     env_file: .env
     depends_on:
       - redis
+      - lowkey-vault

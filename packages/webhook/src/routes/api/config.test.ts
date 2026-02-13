@@ -10,10 +10,8 @@ vi.mock("@mapthew/shared/config", async () => {
     getConfig: vi.fn().mockResolvedValue({
       botName: "testbot",
       claudeModel: "claude-sonnet-4-5",
-      jiraBaseUrl: "https://test.atlassian.net",
       jiraLabelTrigger: "claude-ready",
       jiraLabelAdd: "claude-processed",
-      verboseLogs: false,
       maxSessions: 5,
       pruneThresholdDays: 7,
       pruneIntervalDays: 7,
@@ -48,7 +46,6 @@ describe("Config API routes", () => {
       expect(res.body).toMatchObject({
         botName: "testbot",
         claudeModel: "claude-sonnet-4-5",
-        jiraBaseUrl: "https://test.atlassian.net",
       });
       expect(getConfig).toHaveBeenCalled();
     });
@@ -86,39 +83,6 @@ describe("Config API routes", () => {
 
       expect(res.status).toBe(400);
       expect(res.body.error).toContain("Invalid model");
-    });
-
-    it("updates JIRA base URL", async () => {
-      const app = createApp();
-
-      const res = await request(app)
-        .put("/config")
-        .send({ jiraBaseUrl: "https://newjira.atlassian.net" });
-
-      expect(res.status).toBe(200);
-      expect(saveConfig).toHaveBeenCalled();
-    });
-
-    it("rejects invalid JIRA URL", async () => {
-      const app = createApp();
-
-      const res = await request(app)
-        .put("/config")
-        .send({ jiraBaseUrl: "http://not-https.com" });
-
-      expect(res.status).toBe(400);
-      expect(res.body.error).toContain("Invalid JIRA base URL");
-    });
-
-    it("allows empty JIRA URL", async () => {
-      const app = createApp();
-
-      const res = await request(app)
-        .put("/config")
-        .send({ jiraBaseUrl: "" });
-
-      expect(res.status).toBe(200);
-      expect(saveConfig).toHaveBeenCalled();
     });
 
     it("returns 500 when saveConfig throws", async () => {

@@ -37,7 +37,7 @@
     "viewTasks": "Tasks",
     "viewTasksDescription": "See what I'm working on",
     "sessions": "Sessions",
-    "sessionsDescription": "Active context sessions",
+    "sessionsDescription": "Track what I'm thinking about",
     "settings": "Settings",
     "settingsDescription": "Manage how I work"
   },
@@ -94,10 +94,6 @@
       "label": "Model",
       "description": "The model used when processing tasks"
     },
-    "verboseLogs": {
-      "label": "Verbose Logging",
-      "description": "Log details for ignored webhook events (useful for debugging)"
-    },
     "jiraLabels": {
       "title": "JIRA Labels",
       "trigger": {
@@ -149,7 +145,11 @@
         "apiKey": "API Key"
       },
       "notConfigured": "Not configured",
-      "notEditable": "Must be set as an environment variable"
+      "editSecret": "Edit secret",
+      "deleteSecret": "Clear secret",
+      "deleteConfirm": "Are you sure you want to delete this secret?",
+      "saveSecret": "Save",
+      "cancelEdit": "Cancel"
     },
     "version": "Version {{version}}"
   },

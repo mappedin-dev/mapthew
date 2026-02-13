@@ -84,11 +84,13 @@ export interface InvokeOptions {
  * @param job - The job to process
  * @param workDir - The working directory for Claude
  * @param options - Optional settings (e.g., session resume)
+ * @param secretEnv - Env-var-mapped secrets (from SecretsManager.getEnv())
  */
 export async function invokeClaudeCode(
   job: Job,
   workDir: string,
   options: InvokeOptions = {},
+  secretEnv: Record<string, string> = {},
 ): Promise<{ success: boolean; output: string; error?: string }> {
   const { hasSession = false } = options;
   const prompt = await buildPrompt(job);
@@ -129,10 +131,7 @@ export async function invokeClaudeCode(
 
     const proc = spawn("claude", args, {
       cwd: workDir,
-      env: {
-        ...process.env,
-        // MCP config will be loaded from mcp-config.json
-      },
+      env: { ...process.env, ...secretEnv },
       stdio: ["ignore", "pipe", "pipe"],
     });
 

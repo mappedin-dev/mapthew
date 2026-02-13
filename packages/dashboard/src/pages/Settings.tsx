@@ -1,13 +1,12 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useTranslation, Trans } from "react-i18next";
 import { CLAUDE_MODELS } from "@mapthew/shared/constants";
-import type { ClaudeModel } from "@mapthew/shared/types";
+import type { ClaudeModel, AppConfig } from "@mapthew/shared/types";
 import { api } from "../api/client";
 import { Dropdown } from "../components/Dropdown";
 import { LoadingSpinner } from "../components/LoadingSpinner";
 import { ErrorCard } from "../components/ErrorCard";
-import { SaveButton } from "../components/SaveButton";
 import { IntegrationsCard } from "../components/IntegrationsCard";
 import { useConfig } from "../context/ConfigContext";
 
@@ -32,34 +31,18 @@ function validateBotName(value: string): string | null {
   return null;
 }
 
-function validateJiraBaseUrl(value: string): string | null {
-  if (!value) return null; // Empty is allowed
-  try {
-    const url = new URL(value);
-    if (url.protocol !== "https:") {
-      return "settings.integrations.jira.baseUrlInvalid";
-    }
-    return null;
-  } catch {
-    return "settings.integrations.jira.baseUrlInvalid";
-  }
-}
-
 export default function Settings() {
   const { t } = useTranslation();
   const { botDisplayName } = useConfig();
   const queryClient = useQueryClient();
   const [botName, setBotName] = useState("");
   const [claudeModel, setClaudeModel] = useState<ClaudeModel | "">(CLAUDE_MODELS[0]);
-  const [jiraBaseUrl, setJiraBaseUrl] = useState("");
-  const [verboseLogs, setVerboseLogs] = useState(false);
   const [jiraLabelTrigger, setJiraLabelTrigger] = useState("");
   const [jiraLabelAdd, setJiraLabelAdd] = useState("");
   const [maxSessions, setMaxSessions] = useState(5);
   const [pruneThresholdDays, setPruneThresholdDays] = useState(7);
   const [pruneIntervalDays, setPruneIntervalDays] = useState(7);
   const [touched, setTouched] = useState(false);
-  const [saved, setSaved] = useState(false);
 
   const { data: config, isLoading, error } = useQuery({
     queryKey: ["config"],
@@ -75,8 +58,6 @@ export default function Settings() {
     if (config) {
       setBotName(config.botName);
       setClaudeModel(config.claudeModel);
-      setJiraBaseUrl(config.jiraBaseUrl);
-      setVerboseLogs(config.verboseLogs);
       setJiraLabelTrigger(config.jiraLabelTrigger);
       setJiraLabelAdd(config.jiraLabelAdd);
       setMaxSessions(config.maxSessions);
@@ -86,30 +67,42 @@ export default function Settings() {
   }, [config]);
 
   const mutation = useMutation({
-    mutationFn: (updates: Partial<{ botName: string; claudeModel: ClaudeModel; jiraBaseUrl: string; jiraLabelTrigger: string; jiraLabelAdd: string; verboseLogs: boolean; maxSessions: number; pruneThresholdDays: number; pruneIntervalDays: number }>) =>
-      api.updateConfig(updates),
+    mutationFn: (updates: Partial<AppConfig>) => api.updateConfig(updates),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["config"] });
-      setSaved(true);
-      setTimeout(() => setSaved(false), 2000);
     },
   });
 
+  const saveField = useCallback(
+    (field: keyof AppConfig, value: string | number) => {
+      if (!config || value === config[field]) return;
+      mutation.mutate({ [field]: value });
+    },
+    [config, mutation],
+  );
+
+  const handleSecretUpdate = async (key: string, value: string) => {
+    await api.updateSecret(key, value);
+    queryClient.invalidateQueries({ queryKey: ["secrets"] });
+  };
+
+  const handleSecretDelete = async (key: string) => {
+    await api.deleteSecret(key);
+    queryClient.invalidateQueries({ queryKey: ["secrets"] });
+  };
+
   const validationError = validateBotName(botName);
   const showError = touched && validationError;
-  const jiraBaseUrlError = validateJiraBaseUrl(jiraBaseUrl);
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    // Only allow valid characters, auto-lowercase
+  const handleBotNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value.toLowerCase().replace(/[^a-z0-9_-]/g, "");
     setBotName(value);
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleBotNameSave = () => {
     setTouched(true);
-    if (!validationError && !jiraBaseUrlError && claudeModel) {
-      mutation.mutate({ botName, claudeModel, jiraBaseUrl, jiraLabelTrigger, jiraLabelAdd, verboseLogs, maxSessions, pruneThresholdDays, pruneIntervalDays });
+    if (!validateBotName(botName)) {
+      saveField("botName", botName);
     }
   };
 
@@ -121,17 +114,6 @@ export default function Settings() {
     return <ErrorCard message={t("settings.errorLoading", { message: (error as Error).message })} />;
   }
 
-  const hasChanges =
-    botName !== config?.botName ||
-    claudeModel !== config?.claudeModel ||
-    jiraBaseUrl !== config?.jiraBaseUrl ||
-    jiraLabelTrigger !== config?.jiraLabelTrigger ||
-    jiraLabelAdd !== config?.jiraLabelAdd ||
-    verboseLogs !== config?.verboseLogs ||
-    maxSessions !== config?.maxSessions ||
-    pruneThresholdDays !== config?.pruneThresholdDays ||
-    pruneIntervalDays !== config?.pruneIntervalDays;
-
   return (
     <div className="max-w-xl mx-auto space-y-6">
       <h1 className="text-3xl font-bold text-white flex items-center gap-3">
@@ -142,7 +124,7 @@ export default function Settings() {
         {t("settings.title")}
       </h1>
 
-      <form onSubmit={handleSubmit} className="space-y-6">
+      <div className="space-y-6">
         <div className="glass-card p-6 space-y-6">
           <div>
             <label htmlFor="botName" className="block text-sm font-medium text-dark-200">
@@ -167,8 +149,11 @@ export default function Settings() {
                 type="text"
                 id="botName"
                 value={botName}
-                onChange={handleChange}
-                onBlur={() => setTouched(true)}
+                onChange={handleBotNameChange}
+                onBlur={handleBotNameSave}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") (e.target as HTMLInputElement).blur();
+                }}
                 maxLength={32}
                 autoComplete="off"
                 className="flex-1 px-2 py-3 bg-transparent text-white placeholder-dark-500 focus:outline-none"
@@ -196,32 +181,12 @@ export default function Settings() {
               id="claudeModel"
               value={claudeModel}
               options={CLAUDE_MODELS.map((model) => ({ value: model, label: model }))}
-              onChange={(value) => setClaudeModel(value as ClaudeModel)}
+              onChange={(value) => {
+                setClaudeModel(value as ClaudeModel);
+                saveField("claudeModel", value as ClaudeModel);
+              }}
             />
           </div>
-
-          <hr className="border-dark-700" />
-
-          <label htmlFor="verboseLogs" className="flex items-center justify-between cursor-pointer">
-            <div>
-              <p className="text-sm font-medium text-dark-200">
-                {t("settings.verboseLogs.label")}
-              </p>
-              <p className="text-sm text-dark-500 mt-1">
-                {t("settings.verboseLogs.description")}
-              </p>
-            </div>
-            <div className="relative ml-4 shrink-0">
-              <input
-                type="checkbox"
-                id="verboseLogs"
-                checked={verboseLogs}
-                onChange={(e) => setVerboseLogs(e.target.checked)}
-                className="sr-only peer"
-              />
-              <div className="w-11 h-6 bg-dark-700 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-accent rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-dark-400 after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-accent peer-checked:after:bg-white" />
-            </div>
-          </label>
         </div>
 
         <div className="glass-card p-6 space-y-6">
@@ -239,6 +204,10 @@ export default function Settings() {
               id="jiraLabelTrigger"
               value={jiraLabelTrigger}
               onChange={(e) => setJiraLabelTrigger(e.target.value)}
+              onBlur={() => saveField("jiraLabelTrigger", jiraLabelTrigger)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") (e.target as HTMLInputElement).blur();
+              }}
               autoComplete="off"
               className="w-full px-4 py-3 bg-dark-950/50 border border-dark-700 rounded-lg text-white placeholder-dark-500 focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent"
               placeholder={t("settings.jiraLabels.trigger.placeholder")}
@@ -262,6 +231,10 @@ export default function Settings() {
               id="jiraLabelAdd"
               value={jiraLabelAdd}
               onChange={(e) => setJiraLabelAdd(e.target.value)}
+              onBlur={() => saveField("jiraLabelAdd", jiraLabelAdd)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") (e.target as HTMLInputElement).blur();
+              }}
               autoComplete="off"
               className="w-full px-4 py-3 bg-dark-950/50 border border-dark-700 rounded-lg text-white placeholder-dark-500 focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent"
               placeholder={t("settings.jiraLabels.add.placeholder")}
@@ -287,6 +260,10 @@ export default function Settings() {
               id="maxSessions"
               value={maxSessions}
               onChange={(e) => setMaxSessions(Math.max(1, Math.min(100, parseInt(e.target.value) || 1)))}
+              onBlur={() => saveField("maxSessions", maxSessions)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") (e.target as HTMLInputElement).blur();
+              }}
               min={1}
               max={100}
               className="w-full px-4 py-3 bg-dark-950/50 border border-dark-700 rounded-lg text-white placeholder-dark-500 focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent"
@@ -307,6 +284,10 @@ export default function Settings() {
               id="pruneThresholdDays"
               value={pruneThresholdDays}
               onChange={(e) => setPruneThresholdDays(Math.max(1, Math.min(365, parseInt(e.target.value) || 1)))}
+              onBlur={() => saveField("pruneThresholdDays", pruneThresholdDays)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") (e.target as HTMLInputElement).blur();
+              }}
               min={1}
               max={365}
               className="w-full px-4 py-3 bg-dark-950/50 border border-dark-700 rounded-lg text-white placeholder-dark-500 focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent"
@@ -327,6 +308,10 @@ export default function Settings() {
               id="pruneIntervalDays"
               value={pruneIntervalDays}
               onChange={(e) => setPruneIntervalDays(Math.max(1, Math.min(365, parseInt(e.target.value) || 1)))}
+              onBlur={() => saveField("pruneIntervalDays", pruneIntervalDays)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") (e.target as HTMLInputElement).blur();
+              }}
               min={1}
               max={365}
               className="w-full px-4 py-3 bg-dark-950/50 border border-dark-700 rounded-lg text-white placeholder-dark-500 focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent"
@@ -337,26 +322,19 @@ export default function Settings() {
         {secrets && (
           <IntegrationsCard
             secrets={secrets}
-            jiraBaseUrl={jiraBaseUrl}
-            onJiraBaseUrlChange={setJiraBaseUrl}
-            jiraBaseUrlError={jiraBaseUrlError ? t(jiraBaseUrlError) : null}
+            onSecretUpdate={handleSecretUpdate}
+            onSecretDelete={handleSecretDelete}
           />
         )}
+      </div>
 
-        <div className="flex items-center justify-center gap-4">
-          <SaveButton
-            isPending={mutation.isPending}
-            isSaved={saved}
-            disabled={mutation.isPending || (!hasChanges && !saved) || !!validationError || !!jiraBaseUrlError}
-            label={t("common.save")}
-          />
-          {mutation.error && (
-            <span className="text-red-400 text-sm">
-              {(mutation.error as Error).message}
-            </span>
-          )}
+      {mutation.error && (
+        <div className="text-center">
+          <span className="text-red-400 text-sm">
+            {(mutation.error as Error).message}
+          </span>
         </div>
-        </form>
+      )}
 
       <div className="text-center pt-8">
         <p className="text-dark-600 text-sm">
