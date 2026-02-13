@@ -19,6 +19,8 @@ export interface AppConfig {
   jiraLabelTrigger: string;
   /** Label to add to a JIRA issue after processing completes */
   jiraLabelAdd: string;
+  /** Bot's JIRA account ID — used to recognize wiki markup mentions [~accountid:xxx] */
+  jiraBotAccountId: string;
   /** Soft cap — oldest session evicted when exceeded */
   maxSessions: number;
   /** Sessions inactive longer than this (days) are pruned */

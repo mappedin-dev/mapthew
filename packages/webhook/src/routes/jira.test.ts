@@ -58,6 +58,7 @@ vi.mock("@mapthew/shared/config", () => ({
 
 import jiraRouter from "./jira.js";
 import { postJiraComment } from "@mapthew/shared/api";
+import { setJiraBotAccountId } from "@mapthew/shared/utils";
 
 function createApp() {
   const app = express();
@@ -87,9 +88,7 @@ describe("JIRA webhook routes", () => {
       };
 
       const app = createApp();
-      const res = await request(app)
-        .post("/webhook/jira")
-        .send(payload);
+      const res = await request(app).post("/webhook/jira").send(payload);
 
       expect(res.status).toBe(200);
       expect(res.body).toMatchObject({
@@ -105,7 +104,7 @@ describe("JIRA webhook routes", () => {
           instruction: "implement authentication",
           triggeredBy: "John Doe",
         }),
-        expect.any(Object)
+        expect.any(Object),
       );
       expect(postJiraComment).toHaveBeenCalled();
     });
@@ -121,9 +120,7 @@ describe("JIRA webhook routes", () => {
       };
 
       const app = createApp();
-      const res = await request(app)
-        .post("/webhook/jira")
-        .send(payload);
+      const res = await request(app).post("/webhook/jira").send(payload);
 
       expect(res.status).toBe(200);
       expect(res.body).toMatchObject({
@@ -144,9 +141,7 @@ describe("JIRA webhook routes", () => {
       };
 
       const app = createApp();
-      const res = await request(app)
-        .post("/webhook/jira")
-        .send(payload);
+      const res = await request(app).post("/webhook/jira").send(payload);
 
       expect(res.status).toBe(200);
       expect(res.body.status).toBe("ignored");
@@ -187,9 +182,7 @@ describe("JIRA webhook routes", () => {
       };
 
       const app = createApp();
-      const res = await request(app)
-        .post("/webhook/jira")
-        .send(payload);
+      const res = await request(app).post("/webhook/jira").send(payload);
 
       expect(res.status).toBe(200);
       expect(res.body).toMatchObject({
@@ -205,9 +198,46 @@ describe("JIRA webhook routes", () => {
           instruction: "implement authentication",
           triggeredBy: "John Doe",
         }),
-        expect.any(Object)
+        expect.any(Object),
       );
       expect(postJiraComment).toHaveBeenCalled();
+    });
+
+    it("queues job for comment_created with wiki markup mention", async () => {
+      setJiraBotAccountId("557058:abc123def456");
+
+      const payload = {
+        webhookEvent: "comment_created",
+        comment: {
+          body: "[~accountid:557058:abc123def456] implement authentication",
+          author: { displayName: "John Doe" },
+        },
+        issue: { key: "PROJ-123" },
+      };
+
+      const app = createApp();
+      const res = await request(app).post("/webhook/jira").send(payload);
+
+      expect(res.status).toBe(200);
+      expect(res.body).toMatchObject({
+        status: "queued",
+        issueKey: "PROJ-123",
+      });
+      expect(mockQueue.add).toHaveBeenCalledWith(
+        "process-ticket",
+        expect.objectContaining({
+          source: "jira",
+          issueKey: "PROJ-123",
+          projectKey: "PROJ",
+          instruction: "implement authentication",
+          triggeredBy: "John Doe",
+        }),
+        expect.any(Object),
+      );
+      expect(postJiraComment).toHaveBeenCalled();
+
+      // Clean up
+      setJiraBotAccountId("");
     });
 
     it("extracts project key from issue key", async () => {
@@ -221,16 +251,14 @@ describe("JIRA webhook routes", () => {
       };
 
       const app = createApp();
-      await request(app)
-        .post("/webhook/jira")
-        .send(payload);
+      await request(app).post("/webhook/jira").send(payload);
 
       expect(mockQueue.add).toHaveBeenCalledWith(
         "process-ticket",
         expect.objectContaining({
           projectKey: "MYPROJECT",
         }),
-        expect.any(Object)
+        expect.any(Object),
       );
     });
   });
@@ -256,9 +284,7 @@ describe("JIRA webhook routes", () => {
       };
 
       const app = createApp();
-      const res = await request(app)
-        .post("/webhook/jira")
-        .send(payload);
+      const res = await request(app).post("/webhook/jira").send(payload);
 
       expect(res.status).toBe(200);
       expect(res.body).toMatchObject({
@@ -274,7 +300,7 @@ describe("JIRA webhook routes", () => {
           instruction: "implement the change described in this ticket",
           triggeredBy: "Jane Doe",
         }),
-        expect.any(Object)
+        expect.any(Object),
       );
       expect(postJiraComment).toHaveBeenCalled();
     });
@@ -296,9 +322,7 @@ describe("JIRA webhook routes", () => {
       };
 
       const app = createApp();
-      const res = await request(app)
-        .post("/webhook/jira")
-        .send(payload);
+      const res = await request(app).post("/webhook/jira").send(payload);
 
       expect(res.status).toBe(200);
       expect(res.body.status).toBe("ignored");
@@ -328,9 +352,7 @@ describe("JIRA webhook routes", () => {
       };
 
       const app = createApp();
-      const res = await request(app)
-        .post("/webhook/jira")
-        .send(payload);
+      const res = await request(app).post("/webhook/jira").send(payload);
 
       expect(res.status).toBe(200);
       expect(res.body.status).toBe("ignored");
@@ -360,9 +382,7 @@ describe("JIRA webhook routes", () => {
       };
 
       const app = createApp();
-      const res = await request(app)
-        .post("/webhook/jira")
-        .send(payload);
+      const res = await request(app).post("/webhook/jira").send(payload);
 
       expect(res.status).toBe(200);
       expect(res.body.status).toBe("queued");
@@ -385,9 +405,7 @@ describe("JIRA webhook routes", () => {
       };
 
       const app = createApp();
-      const res = await request(app)
-        .post("/webhook/jira")
-        .send(payload);
+      const res = await request(app).post("/webhook/jira").send(payload);
 
       expect(res.status).toBe(200);
       expect(res.body.status).toBe("queued");
@@ -396,7 +414,7 @@ describe("JIRA webhook routes", () => {
         expect.objectContaining({
           triggeredBy: "label-trigger",
         }),
-        expect.any(Object)
+        expect.any(Object),
       );
     });
   });

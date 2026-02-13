@@ -94,8 +94,14 @@
       "label": "Model",
       "description": "The model used when processing tasks"
     },
-    "jiraLabels": {
-      "title": "JIRA Labels",
+    "jira": {
+      "title": "JIRA",
+      "botAccountId": {
+        "label": "Bot Account ID",
+        "description": "The bot's JIRA account ID, used to recognize @mentions via autocomplete",
+        "placeholder": "e.g. 557058:abc12345-6789-0abc-def0-123456789abc",
+        "hint": "Required for rich @mention triggers. Find this in JIRA admin under Users."
+      },
       "trigger": {
         "label": "Trigger Label",
         "description": "When this label is added to a JIRA issue, a job is automatically created",

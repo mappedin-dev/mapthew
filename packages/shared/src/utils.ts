@@ -11,6 +11,7 @@ import type {
 
 // Internal state - can be updated at runtime
 let botName: string | null = null;
+let jiraBotAccountId: string | null = null;
 
 // Valid bot name pattern: lowercase alphanumeric, dashes, underscores (safe for git branches and queue names)
 const VALID_BOT_NAME_PATTERN = /^[a-z0-9][a-z0-9_-]*$/;
@@ -45,7 +46,7 @@ export function getBotName(): string {
   const name = botName ?? process.env.BOT_NAME ?? "mapthew";
   if (!isValidBotName(name)) {
     console.warn(
-      `Invalid BOT_NAME "${name}" - must be lowercase alphanumeric with dashes/underscores (max 32 chars). Using "mapthew".`
+      `Invalid BOT_NAME "${name}" - must be lowercase alphanumeric with dashes/underscores (max 32 chars). Using "mapthew".`,
     );
     return "mapthew";
   }
@@ -68,10 +69,25 @@ export function getBotDisplayName(): string {
 export function setBotName(name: string): void {
   if (!isValidBotName(name)) {
     throw new Error(
-      `Invalid bot name "${name}" - must be lowercase alphanumeric with dashes/underscores, starting with alphanumeric (max 32 chars)`
+      `Invalid bot name "${name}" - must be lowercase alphanumeric with dashes/underscores, starting with alphanumeric (max 32 chars)`,
     );
   }
   botName = name;
+}
+
+/**
+ * Get the bot's JIRA account ID (used to recognize wiki markup mentions)
+ * Reads from: 1) runtime setter, 2) JIRA_BOT_ACCOUNT_ID env var, 3) empty string
+ */
+export function getJiraBotAccountId(): string {
+  return jiraBotAccountId ?? process.env.JIRA_BOT_ACCOUNT_ID ?? "";
+}
+
+/**
+ * Set the bot's JIRA account ID at runtime
+ */
+export function setJiraBotAccountId(accountId: string): void {
+  jiraBotAccountId = accountId;
 }
 
 /**
@@ -144,14 +160,38 @@ export function extractTextFromAdf(node: AdfNode): string {
 }
 
 /**
+ * Normalize JIRA wiki markup mentions into @mention format.
+ * Replaces [~accountid:xxx] with @botname when the account ID matches
+ * the configured bot account ID.
+ *
+ * JIRA Cloud webhooks deliver comment bodies as wiki markup strings where
+ * rich @mentions (autocomplete) appear as [~accountid:<id>] rather than @name.
+ */
+export function normalizeWikiMentions(text: string): string {
+  const accountId = getJiraBotAccountId();
+  if (!accountId) return text;
+  // Escape special regex chars in the account ID (e.g. colons)
+  const escaped = accountId.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  return text.replace(
+    new RegExp(`\\[~accountid:${escaped}\\]`, "g"),
+    `@${getBotName()}`,
+  );
+}
+
+/**
  * Extract bot instruction from comment body.
- * Handles both plain text strings and ADF (Atlassian Document Format) objects.
+ * Handles plain text strings, ADF (Atlassian Document Format) objects,
+ * and JIRA wiki markup with [~accountid:xxx] mentions.
  * Returns null if no trigger found (e.g., @mapthew or configured bot name).
  */
-export function extractBotInstruction(commentBody: string | AdfNode): string | null {
-  const text = typeof commentBody === "string"
-    ? commentBody
-    : extractTextFromAdf(commentBody);
+export function extractBotInstruction(
+  commentBody: string | AdfNode,
+): string | null {
+  const raw =
+    typeof commentBody === "string"
+      ? commentBody
+      : extractTextFromAdf(commentBody);
+  const text = normalizeWikiMentions(raw);
   const match = text.match(getTriggerPattern());
   return match ? match[1].trim() : null;
 }
@@ -169,7 +209,7 @@ export function isGitHubPRCommentEvent(payload: GitHubWebhookPayload): boolean {
  * Check if a GitHub webhook payload is an issue comment event
  */
 export function isGitHubIssueCommentEvent(
-  payload: GitHubWebhookPayload
+  payload: GitHubWebhookPayload,
 ): boolean {
   return (
     payload.action === "created" && payload.issue?.pull_request === undefined
@@ -205,12 +245,8 @@ export function wasLabelAdded(
   return payload.changelog.items.some((item) => {
     if (item.field !== "labels") return false;
 
-    const oldLabels = item.fromString
-      ? item.fromString.split(/\s+/)
-      : [];
-    const newLabels = item.toString
-      ? item.toString.split(/\s+/)
-      : [];
+    const oldLabels = item.fromString ? item.fromString.split(/\s+/) : [];
+    const newLabels = item.toString ? item.toString.split(/\s+/) : [];
 
     // Label was added if it's in the new set but not the old set
     return newLabels.includes(label) && !oldLabels.includes(label);
@@ -220,7 +256,9 @@ export function wasLabelAdded(
 /**
  * Get the configured JIRA label trigger from AppConfig.
  */
-export function getLabelTrigger(config?: { jiraLabelTrigger?: string }): string {
+export function getLabelTrigger(config?: {
+  jiraLabelTrigger?: string;
+}): string {
   return config?.jiraLabelTrigger ?? "claude-ready";
 }
 

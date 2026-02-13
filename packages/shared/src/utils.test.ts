@@ -3,6 +3,7 @@ import {
   isValidBotName,
   getBotName,
   setBotName,
+  setJiraBotAccountId,
   getTriggerPattern,
   getQueueName,
   getBranchPrefix,
@@ -12,6 +13,7 @@ import {
   isCommentCreatedEvent,
   extractBotInstruction,
   extractTextFromAdf,
+  normalizeWikiMentions,
   isGitHubPRCommentEvent,
   isGitHubIssueCommentEvent,
   extractIssueKeyFromBranch,
@@ -242,7 +244,7 @@ describe("extractBotInstruction", () => {
 
   it("trims whitespace", () => {
     expect(extractBotInstruction("@mapthew   do the thing  ")).toBe(
-      "do the thing"
+      "do the thing",
     );
   });
 
@@ -277,9 +279,7 @@ describe("extractBotInstruction", () => {
       content: [
         {
           type: "paragraph",
-          content: [
-            { type: "text", text: "just a regular comment" },
-          ],
+          content: [{ type: "text", text: "just a regular comment" }],
         },
       ],
     };
@@ -309,6 +309,76 @@ describe("extractBotInstruction", () => {
     };
     expect(extractBotInstruction(adfBody)).toBe("fix the login bug");
   });
+
+  it("extracts instruction from wiki markup mention when account ID is configured", () => {
+    setJiraBotAccountId("557058:abc123def456");
+    expect(
+      extractBotInstruction(
+        "[~accountid:557058:abc123def456] implement authentication",
+      ),
+    ).toBe("implement authentication");
+  });
+
+  it("returns null for wiki markup mention of a different user", () => {
+    setJiraBotAccountId("557058:abc123def456");
+    expect(
+      extractBotInstruction("[~accountid:other-user-id] do something"),
+    ).toBeNull();
+  });
+
+  it("returns null for wiki markup mention when account ID is not configured", () => {
+    setJiraBotAccountId("");
+    expect(
+      extractBotInstruction(
+        "[~accountid:557058:abc123def456] implement authentication",
+      ),
+    ).toBeNull();
+  });
+
+  it("extracts instruction from wiki markup with multiple mentions including the bot", () => {
+    setJiraBotAccountId("557058:abc123def456");
+    expect(
+      extractBotInstruction(
+        "[~accountid:other-user] hey, [~accountid:557058:abc123def456] fix the login bug",
+      ),
+    ).toBe("fix the login bug");
+  });
+});
+
+describe("normalizeWikiMentions", () => {
+  beforeEach(() => {
+    setBotName("mapthew");
+  });
+
+  it("replaces bot mention with @botname when account ID matches", () => {
+    setJiraBotAccountId("557058:abc123def456");
+    expect(
+      normalizeWikiMentions("[~accountid:557058:abc123def456] do stuff"),
+    ).toBe("@mapthew do stuff");
+  });
+
+  it("does not replace mention when account ID does not match", () => {
+    setJiraBotAccountId("557058:abc123def456");
+    expect(normalizeWikiMentions("[~accountid:other-user-id] do stuff")).toBe(
+      "[~accountid:other-user-id] do stuff",
+    );
+  });
+
+  it("returns text unchanged when no account ID is configured", () => {
+    setJiraBotAccountId("");
+    expect(
+      normalizeWikiMentions("[~accountid:557058:abc123def456] do stuff"),
+    ).toBe("[~accountid:557058:abc123def456] do stuff");
+  });
+
+  it("replaces multiple occurrences of the bot mention", () => {
+    setJiraBotAccountId("557058:abc123def456");
+    expect(
+      normalizeWikiMentions(
+        "[~accountid:557058:abc123def456] first [~accountid:557058:abc123def456] second",
+      ),
+    ).toBe("@mapthew first @mapthew second");
+  });
 });
 
 describe("extractTextFromAdf", () => {
@@ -318,9 +388,7 @@ describe("extractTextFromAdf", () => {
       content: [
         {
           type: "paragraph",
-          content: [
-            { type: "text", text: "hello world" },
-          ],
+          content: [{ type: "text", text: "hello world" }],
         },
       ],
     };
@@ -455,7 +523,7 @@ describe("isGitHubIssueCommentEvent", () => {
 describe("extractIssueKeyFromBranch", () => {
   it("extracts issue key from branch name", () => {
     expect(extractIssueKeyFromBranch("feature/DXTR-123-add-login")).toBe(
-      "DXTR-123"
+      "DXTR-123",
     );
     expect(extractIssueKeyFromBranch("PROJ-456")).toBe("PROJ-456");
     expect(extractIssueKeyFromBranch("fix/abc-789-bug")).toBe("ABC-789");
@@ -623,7 +691,9 @@ describe("wasLabelAdded", () => {
 
 describe("getLabelTrigger", () => {
   it("returns label from config when provided", () => {
-    expect(getLabelTrigger({ jiraLabelTrigger: "claude-ready" })).toBe("claude-ready");
+    expect(getLabelTrigger({ jiraLabelTrigger: "claude-ready" })).toBe(
+      "claude-ready",
+    );
   });
 
   it("returns default 'claude-ready' when no config provided", () => {

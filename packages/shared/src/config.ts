@@ -1,6 +1,11 @@
 import type { Redis } from "ioredis";
 import type { ClaudeModel, AppConfig } from "./types.js";
-import { getBotName, isValidBotName, setBotName } from "./utils.js";
+import {
+  getBotName,
+  isValidBotName,
+  setBotName,
+  setJiraBotAccountId,
+} from "./utils.js";
 
 let redisClient: Redis | null = null;
 
@@ -13,9 +18,11 @@ const CONFIG_KEY = "mapthew:config";
 function getDefaultConfig(): AppConfig {
   return {
     botName: process.env.BOT_NAME ?? "mapthew",
-    claudeModel: (process.env.CLAUDE_MODEL as ClaudeModel) ?? "claude-sonnet-4-5",
+    claudeModel:
+      (process.env.CLAUDE_MODEL as ClaudeModel) ?? "claude-sonnet-4-5",
     jiraLabelTrigger: process.env.JIRA_LABEL_TRIGGER ?? "claude-ready",
     jiraLabelAdd: process.env.JIRA_LABEL_ADD ?? "claude-processed",
+    jiraBotAccountId: process.env.JIRA_BOT_ACCOUNT_ID ?? "",
     maxSessions: parseInt(process.env.MAX_SESSIONS || "20", 10),
     pruneThresholdDays: parseInt(process.env.PRUNE_THRESHOLD_DAYS || "7", 10),
     pruneIntervalDays: parseInt(process.env.PRUNE_INTERVAL_DAYS || "7", 10),
@@ -51,6 +58,10 @@ export async function getConfig(): Promise<AppConfig> {
       if (config.botName && isValidBotName(config.botName)) {
         setBotName(config.botName);
       }
+      // Update in-memory JIRA bot account ID when loading from Redis
+      if (config.jiraBotAccountId) {
+        setJiraBotAccountId(config.jiraBotAccountId);
+      }
       // Merge with defaults so new fields get fallback values
       return {
         ...defaults,
@@ -70,12 +81,13 @@ export async function getConfig(): Promise<AppConfig> {
 export async function saveConfig(config: AppConfig): Promise<void> {
   if (!isValidBotName(config.botName)) {
     throw new Error(
-      `Invalid bot name "${config.botName}" - must be lowercase alphanumeric with dashes/underscores, starting with alphanumeric (max 32 chars)`
+      `Invalid bot name "${config.botName}" - must be lowercase alphanumeric with dashes/underscores, starting with alphanumeric (max 32 chars)`,
     );
   }
 
   // Update in-memory state
   setBotName(config.botName);
+  setJiraBotAccountId(config.jiraBotAccountId ?? "");
 
   if (!redisClient) {
     console.warn("Redis client not initialized, config not persisted");
