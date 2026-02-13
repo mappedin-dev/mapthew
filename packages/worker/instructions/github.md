@@ -54,4 +54,5 @@ When updating an existing PR:
 2. Do **not** create a new branch — use the existing one
 3. Implement the requested changes based on feedback
 4. Commit and push — the PR will automatically update
-5. Post a comment summarizing what changes you made: `🤓 Done! I've pushed the following changes: <brief summary>`
+5. Reply to the original review comments that prompted the changes, explaining what you fixed or changed in response to each comment
+6. Post a comment summarizing what changes you made: `🤓 Done! I've pushed the following changes: <brief summary>`
