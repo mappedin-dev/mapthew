@@ -309,6 +309,78 @@ describe("extractBotInstruction", () => {
     };
     expect(extractBotInstruction(adfBody)).toBe("fix the login bug");
   });
+
+  it("extracts instruction from ADF with display name containing bot name (e.g., 'Mapthew Bot')", () => {
+    const adfBody: AdfNode = {
+      type: "doc",
+      content: [
+        {
+          type: "paragraph",
+          content: [
+            {
+              type: "mention",
+              attrs: { id: "557058:abc123", text: "@Mapthew Bot" },
+            },
+            { type: "text", text: " implement authentication" },
+          ],
+        },
+      ],
+    };
+    expect(extractBotInstruction(adfBody)).toBe("implement authentication");
+  });
+
+  it("extracts instruction from ADF with capitalized display name", () => {
+    const adfBody: AdfNode = {
+      type: "doc",
+      content: [
+        {
+          type: "paragraph",
+          content: [
+            {
+              type: "mention",
+              attrs: { id: "557058:abc123", text: "@Mapthew" },
+            },
+            { type: "text", text: " deploy the fix" },
+          ],
+        },
+      ],
+    };
+    expect(extractBotInstruction(adfBody)).toBe("deploy the fix");
+  });
+
+  it("extracts instruction from ADF plain text @mention (no rich mention node)", () => {
+    const adfBody: AdfNode = {
+      type: "doc",
+      content: [
+        {
+          type: "paragraph",
+          content: [
+            { type: "text", text: "@mapthew do the thing" },
+          ],
+        },
+      ],
+    };
+    expect(extractBotInstruction(adfBody)).toBe("do the thing");
+  });
+
+  it("returns null for ADF mention of unrelated user", () => {
+    const adfBody: AdfNode = {
+      type: "doc",
+      content: [
+        {
+          type: "paragraph",
+          content: [
+            {
+              type: "mention",
+              attrs: { id: "other-user", text: "@someone-else" },
+            },
+            { type: "text", text: " please review" },
+          ],
+        },
+      ],
+    };
+    expect(extractBotInstruction(adfBody)).toBeNull();
+  });
 });
 
 describe("extractTextFromAdf", () => {

@@ -144,16 +144,83 @@ export function extractTextFromAdf(node: AdfNode): string {
 }
 
 /**
+ * Collect all inline (leaf) nodes from an ADF tree in document order.
+ * Returns a flat array of text and mention nodes.
+ */
+function collectInlineNodes(node: AdfNode): AdfNode[] {
+  if (node.type === "text" || node.type === "mention") {
+    return [node];
+  }
+  if (node.content) {
+    return node.content.flatMap(collectInlineNodes);
+  }
+  return [];
+}
+
+/**
+ * Check if an ADF mention node references the bot.
+ * Matches flexibly: the mention's display text (attrs.text) must contain the
+ * bot name as a whole word, case-insensitive.  This handles Jira display names
+ * like "@mapthew", "@Mapthew", "@Mapthew Bot", etc.
+ */
+function isBotMention(node: AdfNode): boolean {
+  if (node.type !== "mention" || !node.attrs?.text) return false;
+  const mentionText = (node.attrs.text as string).toLowerCase();
+  const name = getBotName();
+  // Check if the mention text contains the bot name as a word boundary match
+  // e.g., "@mapthew" matches "mapthew", "@Mapthew Bot" matches "mapthew"
+  const pattern = new RegExp(`\\b${name}\\b`, "i");
+  return pattern.test(mentionText);
+}
+
+/**
+ * Extract bot instruction from an ADF document by finding a bot mention node
+ * and collecting all text that follows it.
+ *
+ * This handles Jira rich mentions where the mention node's attrs.text may not
+ * exactly match the configured bot name (e.g., display name "Mapthew Bot"
+ * when bot name is "mapthew").
+ */
+function extractInstructionFromAdf(root: AdfNode): string | null {
+  const inlineNodes = collectInlineNodes(root);
+
+  // First, try to find a rich mention node that references the bot
+  const mentionIdx = inlineNodes.findIndex(isBotMention);
+  if (mentionIdx !== -1) {
+    // Collect all text after the mention node
+    const afterMention = inlineNodes
+      .slice(mentionIdx + 1)
+      .map((n) => {
+        if (n.type === "text" && n.text) return n.text;
+        if (n.type === "mention" && n.attrs?.text) return n.attrs.text as string;
+        return "";
+      })
+      .join("")
+      .trim();
+    return afterMention || null;
+  }
+
+  // Fall back to plain-text regex matching (handles plain text @mentions in ADF)
+  const fullText = extractTextFromAdf(root);
+  const match = fullText.match(getTriggerPattern());
+  return match ? match[1].trim() : null;
+}
+
+/**
  * Extract bot instruction from comment body.
  * Handles both plain text strings and ADF (Atlassian Document Format) objects.
  * Returns null if no trigger found (e.g., @mapthew or configured bot name).
+ *
+ * For ADF, uses two strategies:
+ * 1. Find a rich mention node referencing the bot → extract following text
+ * 2. Fall back to regex matching on the extracted plain text
  */
 export function extractBotInstruction(commentBody: string | AdfNode): string | null {
-  const text = typeof commentBody === "string"
-    ? commentBody
-    : extractTextFromAdf(commentBody);
-  const match = text.match(getTriggerPattern());
-  return match ? match[1].trim() : null;
+  if (typeof commentBody === "string") {
+    const match = commentBody.match(getTriggerPattern());
+    return match ? match[1].trim() : null;
+  }
+  return extractInstructionFromAdf(commentBody);
 }
 
 /**
