@@ -8,6 +8,10 @@ import type {
   GitHubWebhookPayload,
   JiraIssueUpdatedPayload,
 } from "./types.js";
+import { extractInstructionFromAdf } from "./adf.js";
+
+// Re-export ADF utilities so existing consumers of @mapthew/shared/utils still work
+export { extractTextFromAdf } from "./adf.js";
 
 // Internal state - can be updated at runtime
 let botName: string | null = null;
@@ -125,35 +129,20 @@ export function isCommentCreatedEvent(payload: WebhookPayload): boolean {
 }
 
 /**
- * Extract plain text from an Atlassian Document Format (ADF) node tree.
- * Recursively walks the ADF structure and concatenates text from:
- * - "text" nodes (via their .text property)
- * - "mention" nodes (via their .attrs.text property, e.g., "@mapthew")
- */
-export function extractTextFromAdf(node: AdfNode): string {
-  if (node.type === "text" && node.text) {
-    return node.text;
-  }
-  if (node.type === "mention" && node.attrs?.text) {
-    return node.attrs.text as string;
-  }
-  if (node.content) {
-    return node.content.map(extractTextFromAdf).join("");
-  }
-  return "";
-}
-
-/**
  * Extract bot instruction from comment body.
  * Handles both plain text strings and ADF (Atlassian Document Format) objects.
  * Returns null if no trigger found (e.g., @mapthew or configured bot name).
+ *
+ * For ADF, uses two strategies:
+ * 1. Find a rich mention node referencing the bot → extract following text
+ * 2. Fall back to regex matching on the extracted plain text
  */
 export function extractBotInstruction(commentBody: string | AdfNode): string | null {
-  const text = typeof commentBody === "string"
-    ? commentBody
-    : extractTextFromAdf(commentBody);
-  const match = text.match(getTriggerPattern());
-  return match ? match[1].trim() : null;
+  if (typeof commentBody === "string") {
+    const match = commentBody.match(getTriggerPattern());
+    return match ? match[1].trim() : null;
+  }
+  return extractInstructionFromAdf(commentBody);
 }
 
 /**
